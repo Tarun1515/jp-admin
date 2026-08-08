@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AppAccessService, AuthService, MenuService, ToastService, UiAuthShellComponent, UiPasswordFieldComponent, applyServerErrors, clearServerError, fieldError, revealErrors } from '@tarun1515/jp-shared';
+import { UiAuthShellComponent, UiPasswordFieldComponent } from 'jp-shared/ui';
+import { AppAccessService, AuthService, MenuService, ToastService } from 'jp-shared/core';
+import { applyServerErrors, clearServerError, fieldError, revealErrors } from 'jp-shared/models';
 
 /**
  * Sign in.
