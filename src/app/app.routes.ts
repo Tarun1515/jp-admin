@@ -71,9 +71,47 @@ export const routes: Routes = [
     canActivate: [authGuard],
     component: AdminLayoutComponent,
     children: [
-      { path: 'dashboard', loadComponent: comingSoon, data: { title: 'Dashboard' } },
-      { path: 'verification/schools', loadComponent: comingSoon, data: { title: 'School verification' } },
-      { path: 'verification/teachers', loadComponent: comingSoon, data: { title: 'Teacher verification' } },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+        data: { title: 'Dashboard' },
+      },
+
+      /*
+        The two verification queues are ONE component with different route
+        data, not two components and not a tab held in a signal.
+
+        Tabs that live in component state break the back button, cannot be
+        bookmarked, and cannot be linked to from an email — and the seeded menu
+        rows point at these two paths, so they have to be real routes anyway.
+      */
+      {
+        path: 'verification/schools',
+        loadComponent: () =>
+          import('./features/verification/queue/verification-queue.component').then(
+            (m) => m.VerificationQueueComponent,
+          ),
+        data: { title: 'School verification', tab: 'schools' },
+      },
+      {
+        path: 'verification/teachers',
+        loadComponent: () =>
+          import('./features/verification/queue/verification-queue.component').then(
+            (m) => m.VerificationQueueComponent,
+          ),
+        data: { title: 'Teacher verification', tab: 'teachers' },
+      },
+      {
+        // Not in the menu, and should not be: it is where the queue goes, not
+        // somewhere anybody navigates to on its own.
+        path: 'verification/requests/:id',
+        loadComponent: () =>
+          import('./features/verification/detail/request-detail.component').then(
+            (m) => m.RequestDetailComponent,
+          ),
+        data: { title: 'Verification request' },
+      },
       { path: 'moderation/jobs', loadComponent: comingSoon, data: { title: 'Job moderation' } },
       { path: 'moderation/reports', loadComponent: comingSoon, data: { title: 'Reports' } },
       { path: 'users', loadComponent: comingSoon, data: { title: 'Users' } },

@@ -1,0 +1,61 @@
+<!--
+  Renders nothing when there is nothing wrong. A permanent "0 problems" panel
+  is furniture; this section appearing at all is the alarm.
+-->
+@if (loading()) {
+  <section class="card">
+    <div class="card__body">
+      <span class="skeleton" style="width: 14rem; height: 1rem"></span>
+    </div>
+  </section>
+} @else if (rows().length > 0) {
+  <section class="card card--marked orphans" style="--jp-card-rule: var(--jp-danger)">
+    <div class="card__header">
+      <div>
+        <h2 class="card__title">
+          {{ rows().length }}
+          {{ rows().length === 1 ? 'approval did' : 'approvals did' }} not finish
+        </h2>
+        <p class="card__subtitle">
+          These were approved, and the account or school behind them was never
+          created. Whoever registered can sign in and will find nothing there.
+        </p>
+      </div>
+
+      <button type="button" class="btn btn--ghost btn--sm" (click)="load()">Re-check</button>
+    </div>
+
+    <div class="card__body orphans__body">
+      <ul class="orphans__list">
+        @for (row of rows(); track row.requestId) {
+          <li class="orphans__item">
+            <div class="orphans__who">
+              <a class="orphans__name" [routerLink]="['/verification/requests', row.requestId]">
+                {{ row.entityName ?? row.requestTypeName }}
+              </a>
+              <span class="orphans__no table__code">{{ row.requestNo }}</span>
+              <p class="orphans__reason">{{ row.reason }}</p>
+            </div>
+
+            <div class="orphans__action">
+              <span class="orphans__age">broken for {{ age(row.hoursSinceCompleted) }}</span>
+              <button
+                type="button"
+                class="btn btn--primary btn--sm"
+                [disabled]="retrying() !== null"
+                (click)="retry(row)"
+              >
+                {{ retrying() === row.requestId ? 'Retrying…' : 'Retry' }}
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+
+      <p class="orphans__note">
+        Retrying is safe to repeat — each step checks whether it has already run,
+        so it either finishes what is missing or changes nothing.
+      </p>
+    </div>
+  </section>
+}

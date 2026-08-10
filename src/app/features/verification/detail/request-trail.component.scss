@@ -1,0 +1,93 @@
+@use 'variables' as v;
+@use 'mixins' as m;
+
+.trail {
+  @include m.flex-column(v.$space-4);
+
+  padding-left: v.$space-5;
+}
+
+/*
+  The spine is drawn per item as a CONNECTOR to the next one, not once down the
+  whole list.
+
+  A single spine spanning the list looks wrong at the only length that matters
+  first: a brand-new request has exactly one entry, and a line from its dot to
+  its dot renders as a stray 2px nub beside the word.
+
+  Per-item connectors have the length built in — the last entry simply has
+  nothing to connect to.
+*/
+.trail__item {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0.85rem;
+    left: calc(-1 * #{v.$space-5} + 0.28rem);
+    height: calc(100% + #{v.$space-4} - 0.85rem);
+    width: 1px;
+    background: var(--jp-border);
+  }
+
+  &:last-child::before { display: none; }
+}
+
+.trail__dot {
+  position: absolute;
+  top: 0.3rem;
+  left: calc(-1 * #{v.$space-5} + 0.03rem);
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--jp-radius-full);
+  background: var(--jp-border-strong);
+
+  // Punches a hole in the spine so the dot reads as a stop on it.
+  box-shadow: 0 0 0 3px var(--jp-surface);
+
+  &--success { background: var(--jp-success); }
+  &--danger  { background: var(--jp-danger); }
+  &--warning { background: var(--jp-warning); }
+  &--neutral { background: var(--jp-border-strong); }
+}
+
+.trail__head {
+  display: flex;
+  align-items: baseline;
+  gap: v.$space-2;
+}
+
+.trail__action {
+  font-size: var(--jp-font-size-sm);
+  font-weight: var(--jp-font-weight-semibold);
+}
+
+.trail__level {
+  font-family: var(--jp-font-family-mono);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: var(--jp-tracking-wide);
+  color: var(--jp-text-subtle);
+}
+
+.trail__when {
+  font-size: var(--jp-font-size-xs);
+  color: var(--jp-text-muted);
+}
+
+.trail__reason {
+  margin-top: v.$space-1;
+  font-size: var(--jp-font-size-xs);
+  font-weight: var(--jp-font-weight-medium);
+  color: var(--jp-text);
+}
+
+.trail__remarks {
+  margin-top: v.$space-1;
+  padding-left: v.$space-3;
+  border-left: 2px solid var(--jp-border);
+  font-size: var(--jp-font-size-sm);
+  color: var(--jp-text-muted);
+  line-height: var(--jp-line-height-snug);
+}

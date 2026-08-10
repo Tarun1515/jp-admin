@@ -1,0 +1,80 @@
+@use 'variables' as v;
+@use 'mixins' as m;
+
+.orphans__body { padding-top: 0; }
+
+.orphans__list {
+  @include m.flex-column(0);
+
+  border-top: 1px solid var(--jp-border);
+}
+
+.orphans__item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: v.$space-4;
+  flex-wrap: wrap;
+  padding: v.$space-3 0;
+  border-bottom: var(--jp-rule-width) solid var(--jp-rule);
+
+  &:last-child { border-bottom: 0; }
+}
+
+.orphans__who {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.orphans__name {
+  font-size: var(--jp-font-size-sm);
+  font-weight: var(--jp-font-weight-semibold);
+  color: var(--jp-text);
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
+}
+
+.orphans__no {
+  margin-left: v.$space-2;
+  font-size: var(--jp-font-size-xs);
+  color: var(--jp-text-subtle);
+}
+
+.orphans__reason {
+  margin-top: 2px;
+  font-size: var(--jp-font-size-xs);
+  color: var(--jp-text-muted);
+  line-height: var(--jp-line-height-snug);
+}
+
+.orphans__action {
+  display: flex;
+  align-items: center;
+  gap: v.$space-3;
+  flex-shrink: 0;
+}
+
+// How long somebody has had an account that does not work. In words, and in
+// the one colour this card uses for urgency.
+.orphans__age {
+  @include m.tabular;
+
+  font-size: var(--jp-font-size-xs);
+  font-weight: var(--jp-font-weight-semibold);
+  color: var(--jp-danger-text);
+  white-space: nowrap;
+}
+
+.orphans__note {
+  margin-top: v.$space-3;
+  font-size: var(--jp-font-size-xs);
+  color: var(--jp-text-muted);
+}
+
+@include m.down(md) {
+  .orphans__action {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

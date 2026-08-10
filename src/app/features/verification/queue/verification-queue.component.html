@@ -1,0 +1,264 @@
+<div class="page enter">
+  <header class="page__header">
+    <div class="page__heading">
+      <h1 class="page__title">Verification</h1>
+      <p class="page__description">
+        @if (loading()) {
+          Loading the queue…
+        } @else if (total() === 0) {
+          Nothing waiting. The queue is clear.
+        } @else {
+          {{ total() }} {{ tab() === 'teachers' ? 'teacher' : 'school' }}
+          {{ total() === 1 ? 'request' : 'requests' }} match these filters, oldest first.
+        }
+      </p>
+    </div>
+
+    <div class="page__actions">
+      <button type="button" class="btn" (click)="refresh()">Refresh</button>
+    </div>
+  </header>
+
+  <!--
+    Tabs are real routes, not local state. Back, refresh and a bookmarked link
+    all land where the person expects, and the seeded menu rows point straight
+    at them.
+  -->
+  <nav class="tabs" aria-label="Verification queues" style="--jp-enter-index: 1">
+    <a class="tabs__tab" routerLink="/verification/schools"
+       [class.tabs__tab--active]="tab() === 'schools'"
+       [attr.aria-current]="tab() === 'schools' ? 'page' : null">
+      Schools
+    </a>
+    <a class="tabs__tab" routerLink="/verification/teachers"
+       [class.tabs__tab--active]="tab() === 'teachers'"
+       [attr.aria-current]="tab() === 'teachers' ? 'page' : null">
+      Teachers
+    </a>
+  </nav>
+
+  <div class="filters" style="--jp-enter-index: 2">
+    <div class="filters__search">
+      <label class="visually-hidden" for="queue-search">Search requests</label>
+      <input
+        class="form-control"
+        id="queue-search"
+        type="search"
+        [placeholder]="tab() === 'teachers' ? 'Search by name or request number' : 'Search by school or request number'"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event); onFilterChange()"
+      />
+    </div>
+
+    <div class="filters__control">
+      <label class="visually-hidden" for="queue-status">Status</label>
+      <select
+        class="form-control"
+        id="queue-status"
+        [ngModel]="statusId()"
+        (ngModelChange)="statusId.set($event); onFilterChange()"
+      >
+        <option [ngValue]="''">Any status</option>
+        @for (status of statuses(); track status.id) {
+          <option [ngValue]="status.id">{{ status.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="filters__control filters__control--date">
+      <label class="visually-hidden" for="queue-from">Submitted from</label>
+      <input
+        class="form-control"
+        id="queue-from"
+        type="date"
+        [ngModel]="fromDate()"
+        (ngModelChange)="fromDate.set($event); onFilterChange()"
+      />
+    </div>
+
+    <div class="filters__control filters__control--date">
+      <label class="visually-hidden" for="queue-to">Submitted to</label>
+      <input
+        class="form-control"
+        id="queue-to"
+        type="date"
+        [ngModel]="toDate()"
+        (ngModelChange)="toDate.set($event); onFilterChange()"
+      />
+    </div>
+
+    <!--
+      "Assigned to me" rather than a person picker: the filter the server takes
+      is a single user id, and the only id this screen can be sure of is the
+      person using it. A dropdown of every admin needs a user list endpoint that
+      does not exist yet — see the known gaps.
+    -->
+    <label class="filters__toggle">
+      <input
+        type="checkbox"
+        [ngModel]="mineOnly()"
+        (ngModelChange)="mineOnly.set($event); onFilterChange()"
+      />
+      <span>Assigned to me</span>
+    </label>
+
+    @if (hasFilters()) {
+      <button type="button" class="btn btn--ghost btn--sm filters__clear" (click)="clearFilters()">
+        Clear
+      </button>
+    }
+  </div>
+
+  <div class="table-wrap" style="--jp-enter-index: 3">
+    <table class="table table--hover">
+      <caption class="visually-hidden">
+        {{ tab() === 'teachers' ? 'Teacher verification' : 'School registration' }} requests,
+        {{ total() }} in total
+      </caption>
+
+      <thead>
+        <tr>
+          <th scope="col" [attr.aria-sort]="ariaSort('requestNo')">
+            <button type="button" class="table__sort" (click)="onSort('requestNo')">Request</button>
+          </th>
+          <th scope="col" [attr.aria-sort]="ariaSort('entityName')">
+            <button type="button" class="table__sort" (click)="onSort('entityName')">
+              {{ tab() === 'teachers' ? 'Teacher' : 'School' }}
+            </button>
+          </th>
+          <th scope="col" [attr.aria-sort]="ariaSort('submittedOn')">
+            <button type="button" class="table__sort" (click)="onSort('submittedOn')">Submitted</button>
+          </th>
+          <th scope="col">Level</th>
+          <th scope="col" [attr.aria-sort]="ariaSort('statusName')">
+            <button type="button" class="table__sort" (click)="onSort('statusName')">Status</button>
+          </th>
+          <th scope="col" class="table__actions" [attr.aria-sort]="ariaSort('waitingDays')">
+            <button type="button" class="table__sort" (click)="onSort('waitingDays')">Waiting</button>
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+        @if (loading()) {
+          <!-- Skeletons, not a spinner: the page keeps its rhythm and nothing
+               jumps when the rows arrive. -->
+          @for (row of skeletonRows; track row) {
+            <tr>
+              <td><span class="skeleton" style="width: 7rem"></span></td>
+              <td><span class="skeleton" style="width: 12rem"></span></td>
+              <td><span class="skeleton" style="width: 5rem"></span></td>
+              <td><span class="skeleton" style="width: 2rem"></span></td>
+              <td><span class="skeleton" style="width: 5rem"></span></td>
+              <td class="table__actions"><span class="skeleton" style="width: 4rem"></span></td>
+            </tr>
+          }
+        } @else {
+          @for (row of rows(); track row.requestId) {
+            <tr
+              [class]="rowState(row)"
+              class="table__row--clickable"
+              tabindex="0"
+              (click)="open(row)"
+              (keydown)="onRowKey($event, row)"
+            >
+              <td class="table__primary">
+                <a class="queue__link" [routerLink]="['/verification/requests', row.requestId]"
+                   (click)="$event.stopPropagation()">
+                  {{ row.requestNo }}
+                </a>
+              </td>
+              <td class="queue__entity">{{ row.entityName ?? '—' }}</td>
+              <td class="table__code">{{ row.submittedOn | date: 'd MMM y' }}</td>
+              <td class="table__code">L{{ row.currentApprovalLevel }}</td>
+              <td>
+                <span class="badge" [class]="'badge badge--' + statusTone(row)">
+                  {{ row.statusName }}
+                </span>
+              </td>
+              <!--
+                The words that go with the margin rule. Without this cell the
+                red bar would be the only signal, which makes the triage
+                invisible to a good number of people.
+              -->
+              <td class="table__actions queue__waiting">{{ waitingLabel(row) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6">
+                <div class="table__empty">
+                  @if (hasFilters()) {
+                    <p class="text-section-title">Nothing matches those filters</p>
+                    <p class="text-helper">
+                      Try widening the date range, or set the status back to any.
+                    </p>
+                    <button type="button" class="btn btn--sm" (click)="clearFilters()">
+                      Clear filters
+                    </button>
+                  } @else {
+                    <!-- An empty queue is a good state. Say so. -->
+                    <p class="text-section-title">The queue is clear</p>
+                    <p class="text-helper">
+                      Every {{ tab() === 'teachers' ? 'teacher verification' : 'school registration' }}
+                      has been dealt with. New ones appear here as they are submitted.
+                    </p>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+
+    @if (total() > 0) {
+      <nav class="table-pager" aria-label="Queue pages">
+        <span class="table-pager__summary">
+          {{ rangeStart() }}–{{ rangeEnd() }} of {{ total() }}
+          @if (attentionCount() > 0) {
+            <span class="queue__attention-note">
+              · {{ attentionCount() }} on this page waiting over 3 days
+            </span>
+          }
+        </span>
+
+        <div class="table-pager__controls">
+          <button
+            type="button"
+            class="table-pager__page"
+            [disabled]="page() === 1"
+            (click)="goToPage(page() - 1)"
+            aria-label="Previous page"
+          >
+            ‹
+          </button>
+
+          @for (number of pageNumbers(); track $index) {
+            @if (number === -1) {
+              <span class="table-pager__gap" aria-hidden="true">…</span>
+            } @else {
+              <button
+                type="button"
+                class="table-pager__page"
+                [attr.aria-current]="number === page() ? 'page' : null"
+                (click)="goToPage(number)"
+              >
+                {{ number }}
+              </button>
+            }
+          }
+
+          <button
+            type="button"
+            class="table-pager__page"
+            [disabled]="page() === totalPages()"
+            (click)="goToPage(page() + 1)"
+            aria-label="Next page"
+          >
+            ›
+          </button>
+        </div>
+      </nav>
+    }
+  </div>
+</div>

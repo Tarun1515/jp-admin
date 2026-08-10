@@ -1,0 +1,55 @@
+@switch (state()) {
+  @case ('idle') {
+    <div class="viewer viewer--empty">
+      <p class="text-section-title">Pick a document</p>
+      <p class="text-helper">It opens here, so you do not have to download it to read it.</p>
+    </div>
+  }
+
+  @case ('loading') {
+    <!-- Content-shaped, so the panel does not collapse and re-expand. -->
+    <div class="viewer viewer--loading" role="status" aria-live="polite">
+      <span class="visually-hidden">Loading {{ fileName() }}</span>
+      <span class="skeleton viewer__skeleton"></span>
+      <span class="skeleton viewer__skeleton"></span>
+      <span class="skeleton viewer__skeleton viewer__skeleton--short"></span>
+    </div>
+  }
+
+  @case ('failed') {
+    <div class="viewer viewer--empty">
+      <p class="text-section-title">This file could not be opened</p>
+      <p class="text-helper">
+        The document is recorded against the request but the file itself did not
+        load. Do not approve on the strength of a document you have not seen —
+        ask for it to be uploaded again.
+      </p>
+    </div>
+  }
+
+  @case ('ready') {
+    <div class="viewer">
+      <div class="viewer__bar">
+        <span class="viewer__name" [title]="fileName()">{{ fileName() }}</span>
+        <button type="button" class="btn btn--ghost btn--sm" (click)="save()">Save a copy</button>
+      </div>
+
+      @if (isPdf()) {
+        <iframe class="viewer__frame" [src]="safeUrl()" [title]="fileName()"></iframe>
+      } @else if (isImage()) {
+        <div class="viewer__image-wrap">
+          <img class="viewer__image" [src]="safeUrl()" [alt]="fileName()" />
+        </div>
+      } @else if (isUnpreviewable()) {
+        <div class="viewer__fallback">
+          <p class="text-section-title">No preview for this file type</p>
+          <p class="text-helper">
+            {{ mimeType() }} cannot be shown in the browser. Save it to check it,
+            then come back to record the decision.
+          </p>
+          <button type="button" class="btn btn--sm" (click)="save()">Save a copy</button>
+        </div>
+      }
+    </div>
+  }
+}

@@ -1,0 +1,428 @@
+@if (loading() && !detail()) {
+  <div class="page">
+    <div class="skeleton" style="width: 18rem; height: 1.75rem"></div>
+    <div class="skeleton" style="width: 26rem; height: 1rem; margin-top: 0.75rem"></div>
+    <div class="detail__grid" style="margin-top: 1.5rem">
+      <div class="card"><div class="card__body">
+        <div class="skeleton" style="height: 1rem"></div>
+        <div class="skeleton" style="height: 1rem; margin-top: 0.75rem"></div>
+        <div class="skeleton" style="height: 1rem; margin-top: 0.75rem; width: 60%"></div>
+      </div></div>
+      <div class="card"><div class="card__body">
+        <div class="skeleton" style="height: 1rem"></div>
+        <div class="skeleton" style="height: 1rem; margin-top: 0.75rem; width: 70%"></div>
+      </div></div>
+    </div>
+  </div>
+} @else if (notFound()) {
+  <div class="page">
+    <header class="page__header">
+      <div class="page__heading">
+        <h1 class="page__title">Request not found</h1>
+        <p class="page__description">
+          It may have been withdrawn, or the link may be wrong.
+        </p>
+      </div>
+    </header>
+    <a class="btn" routerLink="/verification/schools">Back to the queue</a>
+  </div>
+} @else if (detail(); as request) {
+  <div class="page enter">
+    <header class="page__header">
+      <div class="page__heading">
+        <p class="detail__eyebrow">
+          <a routerLink="/verification/{{ isTeacher() ? 'teachers' : 'schools' }}">Verification</a>
+          <span aria-hidden="true">›</span>
+          <span class="table__code">{{ request.header.requestNo }}</span>
+        </p>
+
+        <h1 class="page__title">{{ request.header.entityName ?? request.header.requestTypeName }}</h1>
+
+        <p class="page__description">
+          {{ request.header.requestTypeName }} · submitted
+          {{ request.header.submittedOn | date: 'd MMM y, h:mm a' }}
+          @if (isOpen()) {
+            · waiting {{ request.header.waitingDays }}
+            {{ request.header.waitingDays === 1 ? 'day' : 'days' }}
+          }
+        </p>
+      </div>
+
+      <div class="page__actions">
+        <span class="badge" [class]="'badge badge--' + statusTone(request.header.statusId)">
+          {{ request.header.statusName }}
+        </span>
+      </div>
+    </header>
+
+    <!--
+      🔴 THE BANNER THAT MUST NOT BE A TOAST.
+
+      An approval whose follow-on work failed comes back HTTP 200. If this were
+      a toast it would be gone in four seconds and the school would be approved,
+      unable to sign in, and nobody would know.
+    -->
+    @if (notice(); as note) {
+      <div class="notice" [class]="'notice notice--' + note.kind" role="status" style="--jp-enter-index: 1">
+        <div class="notice__body">
+          <p class="notice__title">{{ note.title }}</p>
+          <p class="notice__message">{{ note.message }}</p>
+        </div>
+
+        <div class="notice__actions">
+          @if (note.canRetry) {
+            <button type="button" class="btn btn--primary btn--sm" [disabled]="acting()"
+                    (click)="retryOrchestration()">
+              {{ acting() ? 'Retrying…' : 'Retry the outstanding work' }}
+            </button>
+          }
+          <button type="button" class="btn btn--ghost btn--sm" (click)="notice.set(null)">
+            Dismiss
+          </button>
+        </div>
+      </div>
+    }
+
+    <div class="detail__grid" style="--jp-enter-index: 2">
+      <!-- ---- left: what they submitted, and what they uploaded ---------- -->
+      <div class="detail__main">
+        <section class="card">
+          <div class="card__header">
+            <div>
+              <h2 class="card__title">What was submitted</h2>
+              <p class="card__subtitle">Exactly as the applicant entered it</p>
+            </div>
+          </div>
+
+          <div class="card__body">
+            @if (request.schoolDetail; as school) {
+              <dl class="facts">
+                <div class="facts__item"><dt>School</dt><dd>{{ school.schoolName }}</dd></div>
+                <div class="facts__item"><dt>Type</dt><dd>{{ lookup(masterKeys.schoolType, school.schoolTypeId) }}</dd></div>
+                <div class="facts__item"><dt>Board</dt><dd>{{ lookup(masterKeys.board, school.boardId) }}</dd></div>
+                <div class="facts__item"><dt>Affiliation no.</dt><dd>{{ school.affiliationNumber ?? '—' }}</dd></div>
+                <div class="facts__item"><dt>Registration no.</dt><dd>{{ school.registrationNo ?? '—' }}</dd></div>
+                <div class="facts__item"><dt>Established</dt><dd>{{ school.establishedYear ?? '—' }}</dd></div>
+
+                <div class="facts__item facts__item--wide">
+                  <dt>Address</dt>
+                  <dd>
+                    {{ school.addressLine1 ?? '—' }}@if (school.addressLine2) {, {{ school.addressLine2 }}}
+                    @if (school.pincode) { — {{ school.pincode }} }
+                    <!--
+                      District and city are deliberately absent, not blank: the
+                      dataset has not been imported (2.47), so there is nothing
+                      to show and an empty row would read as missing data the
+                      applicant failed to fill in.
+                    -->
+                    <span class="facts__sub">{{ lookup(masterKeys.state, school.stateId) }}</span>
+                  </dd>
+                </div>
+
+                <div class="facts__item"><dt>Principal</dt><dd>{{ school.principalName ?? '—' }}</dd></div>
+                <div class="facts__item"><dt>Principal mobile</dt><dd class="table__code">{{ school.principalMobile ?? '—' }}</dd></div>
+                <div class="facts__item"><dt>HR contact</dt><dd>{{ school.hrContactName ?? '—' }}</dd></div>
+                <div class="facts__item"><dt>HR mobile</dt><dd class="table__code">{{ school.hrContactMobile ?? '—' }}</dd></div>
+                <div class="facts__item"><dt>Email</dt><dd>{{ school.contactEmail ?? '—' }}</dd></div>
+                <div class="facts__item"><dt>Mobile</dt><dd class="table__code">{{ school.contactMobile ?? '—' }}</dd></div>
+
+                @if (school.website) {
+                  <div class="facts__item"><dt>Website</dt><dd>{{ school.website }}</dd></div>
+                }
+
+                @if (school.aboutSchool) {
+                  <div class="facts__item facts__item--wide">
+                    <dt>About</dt>
+                    <dd>{{ school.aboutSchool }}</dd>
+                  </div>
+                }
+              </dl>
+            } @else if (request.teacherDetail; as teacher) {
+              <dl class="facts">
+                <div class="facts__item"><dt>Name</dt><dd>{{ teacher.fullName }}</dd></div>
+                <div class="facts__item"><dt>Date of birth</dt><dd>{{ teacher.dob ? (teacher.dob | date: 'd MMM y') : '—' }}</dd></div>
+                <div class="facts__item"><dt>Gender</dt><dd>{{ lookup(masterKeys.gender, teacher.genderId) }}</dd></div>
+                <div class="facts__item"><dt>Qualification</dt><dd>{{ lookup(masterKeys.qualification, teacher.qualificationId) }}</dd></div>
+                <div class="facts__item"><dt>Experience</dt><dd>{{ experience(teacher.totalExperienceMonths) }}</dd></div>
+                <div class="facts__item"><dt>Current school</dt><dd>{{ teacher.currentSchool ?? '—' }}</dd></div>
+                <div class="facts__item"><dt>Location</dt><dd>{{ lookup(masterKeys.state, teacher.currentStateId) }}</dd></div>
+                <div class="facts__item facts__item--wide">
+                  <dt>Subjects</dt>
+                  <dd>{{ subjectNames(teacher.subjectIds) }}</dd>
+                </div>
+              </dl>
+            } @else {
+              <p class="text-helper">
+                This request has no submitted detail recorded against it. That should not
+                happen — do not action it until somebody has looked at why.
+              </p>
+            }
+          </div>
+        </section>
+
+        <!-- ---- documents ------------------------------------------------ -->
+        <section class="card">
+          <div class="card__header">
+            <div>
+              <h2 class="card__title">Documents</h2>
+              <p class="card__subtitle">
+                @if (request.documents.length === 0) {
+                  Nothing uploaded
+                } @else {
+                  Opens here — you should not have to download a file to read it
+                }
+              </p>
+            </div>
+          </div>
+
+          <div class="card__body docs__body">
+            @if (request.documents.length === 0) {
+              <div class="table__empty">
+                <p class="text-section-title">No documents</p>
+                <p class="text-helper">
+                  Nothing has been uploaded against this request. Ask for a
+                  resubmission rather than approving on the form alone.
+                </p>
+              </div>
+            } @else {
+              <ul class="docs">
+                @for (document of request.documents; track document.documentId) {
+                  <li class="docs__item"
+                      [class.docs__item--active]="document.documentId === selectedDocumentId()">
+                    <button type="button" class="docs__pick" (click)="selectDocument(document)">
+                      <span class="docs__name">
+                        {{ document.documentTypeName }}
+                        @if (document.isMandatory) {
+                          <span class="docs__required" title="Mandatory">required</span>
+                        }
+                      </span>
+                      <span class="docs__meta">
+                        {{ document.fileName }} · {{ document.fileSizeKb }} KB
+                        @if (document.version > 1) { · v{{ document.version }} }
+                      </span>
+                    </button>
+
+                    <div class="docs__state">
+                      @if (document.isVerified) {
+                        <span class="badge badge--success badge--sm">Verified</span>
+                      } @else if (document.rejectionReasonId) {
+                        <span class="badge badge--danger badge--sm">Rejected</span>
+                        <span class="docs__reason">{{ document.rejectionReasonName }}</span>
+                      } @else if (isOpen()) {
+                        <button type="button" class="btn btn--ghost btn--sm" [disabled]="acting()"
+                                (click)="verifyDocument(document)">
+                          Verify
+                        </button>
+                        <button type="button" class="btn btn--ghost btn--sm" [disabled]="acting()"
+                                (click)="openDialog({ kind: 'reject-document', document })">
+                          Reject
+                        </button>
+                      } @else {
+                        <span class="badge badge--neutral badge--sm">Not checked</span>
+                      }
+                    </div>
+                  </li>
+                }
+              </ul>
+
+              <div class="docs__viewer">
+                <app-document-viewer
+                  [documentId]="selectedDocumentId()"
+                  [fileName]="selectedDocument()?.fileName ?? ''"
+                  [mimeType]="selectedDocument()?.mimeType ?? ''"
+                />
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+
+      <!-- ---- right: decide, then the history ---------------------------- -->
+      <div class="detail__side">
+        <section class="card">
+          <div class="card__header">
+            <div>
+              <h2 class="card__title">Decision</h2>
+            </div>
+          </div>
+
+          <div class="card__body">
+            @if (isOpen()) {
+              @if (unverifiedMandatory() > 0) {
+                <p class="text-helper decision__warn">
+                  {{ unverifiedMandatory() }} required
+                  {{ unverifiedMandatory() === 1 ? 'document has' : 'documents have' }}
+                  not been checked yet.
+                </p>
+              }
+
+              <div class="decision__actions">
+                <button type="button" class="btn btn--primary w-full" [disabled]="acting()"
+                        (click)="approve()">
+                  Approve
+                </button>
+                <button type="button" class="btn w-full" [disabled]="acting()"
+                        (click)="openDialog({ kind: 'resubmit-request' })">
+                  Ask for a resubmission
+                </button>
+                <button type="button" class="btn btn--danger w-full" [disabled]="acting()"
+                        (click)="openDialog({ kind: 'reject-request' })">
+                  Reject
+                </button>
+              </div>
+
+              <p class="text-helper decision__note">
+                Whatever you write is read by the person waiting on this. Write it
+                as an instruction, not a verdict.
+              </p>
+            } @else {
+              <p class="text-helper">
+                This request was {{ request.header.statusName.toLowerCase()
+                }}@if (request.header.completedOn) { on {{ request.header.completedOn | date: 'd MMM y' }}}.
+                The trail below shows who decided and why.
+              </p>
+
+              <!--
+                🔴 The retry lives here too, not only on the banner. Somebody
+                arriving from the orphan list has no banner — they were not the
+                person who pressed Approve.
+              -->
+              @if (isApproved() && !isTeacher()) {
+                <button type="button" class="btn w-full" [disabled]="acting()"
+                        (click)="retryOrchestration()">
+                  {{ acting() ? 'Running…' : 'Re-run the follow-up work' }}
+                </button>
+                <p class="text-helper decision__note">
+                  Safe to press. Every step checks whether it has already been
+                  done, so this either finishes what is missing or changes nothing.
+                </p>
+              }
+            }
+          </div>
+        </section>
+
+        <!-- ---- payment ---------------------------------------------------- -->
+        <section class="card">
+          <div class="card__header">
+            <div><h2 class="card__title">Payment</h2></div>
+          </div>
+
+          <div class="card__body">
+            @if (request.payments.length === 0) {
+              <p class="text-helper">
+                No payment is recorded against this request. Registration is free
+                during onboarding — plans arrive with subscriptions.
+              </p>
+            } @else {
+              @for (payment of request.payments; track payment.paymentId) {
+                <dl class="facts facts--stack">
+                  <div class="facts__item"><dt>Amount</dt><dd>₹{{ payment.amount }}</dd></div>
+                  <div class="facts__item"><dt>Mode</dt><dd>{{ payment.paymentModeName }}</dd></div>
+                  <div class="facts__item"><dt>Status</dt><dd>{{ payment.paymentStatusName }}</dd></div>
+                  <div class="facts__item"><dt>Reference</dt><dd class="table__code">{{ payment.gatewayRefNo ?? '—' }}</dd></div>
+                  <div class="facts__item"><dt>Paid</dt><dd>{{ payment.paidOn ? (payment.paidOn | date: 'd MMM y') : '—' }}</dd></div>
+                </dl>
+              }
+            }
+          </div>
+        </section>
+
+        <!-- ---- trail ------------------------------------------------------ -->
+        <section class="card">
+          <div class="card__header">
+            <div>
+              <h2 class="card__title">History</h2>
+              <p class="card__subtitle">Append only — nothing here is ever edited</p>
+            </div>
+          </div>
+
+          <div class="card__body">
+            <app-request-trail [entries]="request.trail" />
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!--
+    One dialog, three jobs. Reject and resubmit differ in what happens after,
+    not in what is being asked for: a reason and an instruction.
+  -->
+  <ui-modal [open]="dialog() !== null" [title]="dialogTitle()" size="md"
+            [closeOnBackdrop]="false" (closed)="closeDialog()">
+    <div class="reason-form">
+      <p class="text-helper">
+        @switch (dialog()?.kind) {
+          @case ('reject-request') {
+            This ends the registration. The applicant can start again, but this
+            request is closed — if what you want is a correction, ask for a
+            resubmission instead.
+          }
+          @case ('resubmit-request') {
+            The request stays open and goes back to the applicant to fix. This is
+            the right choice when the problem is fixable.
+          }
+          @case ('reject-document') {
+            The rest of the request stays as it is. They will be asked to upload
+            this one again.
+          }
+        }
+      </p>
+
+      <div class="field">
+        <label class="field__label" for="reason">Reason</label>
+        <select class="form-control" id="reason"
+                [ngModel]="dialogReasonId()" (ngModelChange)="dialogReasonId.set($event)">
+          <option [ngValue]="''">Choose a reason…</option>
+          @for (reason of reasons(); track reason.id) {
+            <option [ngValue]="reason.id">{{ reason.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="remarks">
+          What needs to change
+          @if (!remarksRequired()) { <span class="field__optional">optional</span> }
+        </label>
+        <textarea class="form-control" id="remarks" rows="4"
+                  [placeholder]="reasonPrompt()"
+                  [ngModel]="dialogRemarks()" (ngModelChange)="dialogRemarks.set($event)"></textarea>
+        <p class="field__helper">
+          The school owner reads this while they are waiting and anxious. Say the
+          one thing that gets it approved next time.
+        </p>
+      </div>
+
+      @if (dialogError()) {
+        <p class="field__error">{{ dialogError() }}</p>
+      }
+    </div>
+
+    <ng-container footer>
+      <button type="button" class="btn" (click)="closeDialog()">Cancel</button>
+
+      <!--
+        The confirm button carries the TONE of what it does, not the tone of
+        "this is the main button". A rejection ends someone's registration, and
+        a green button to do it contradicts the red one that opened the dialog
+        — asking for exactly the momentary confusion a confirm step exists to
+        prevent. A resubmission is not destructive, so it stays primary.
+      -->
+      <button
+        type="button"
+        class="btn"
+        [class.btn--danger]="dialog()?.kind !== 'resubmit-request'"
+        [class.btn--primary]="dialog()?.kind === 'resubmit-request'"
+        [disabled]="acting()"
+        (click)="submitDialog()"
+      >
+        @switch (dialog()?.kind) {
+          @case ('reject-request') { Reject the registration }
+          @case ('resubmit-request') { Send it back }
+          @default { Reject the document }
+        }
+      </button>
+    </ng-container>
+  </ui-modal>
+}

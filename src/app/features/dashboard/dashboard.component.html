@@ -1,0 +1,150 @@
+<div class="page enter">
+  <header class="page__header">
+    <div class="page__heading">
+      <h1 class="page__title">Verification desk</h1>
+      <p class="page__description">
+        @if (loading()) {
+          Checking what is waiting…
+        } @else if (totalPending() === 0) {
+          Nothing is waiting. Everything submitted has been dealt with.
+        } @else {
+          {{ totalPending() }} {{ totalPending() === 1 ? 'request is' : 'requests are' }}
+          waiting for a decision.
+          @if (oldestWaiting() > 0) {
+            The oldest has been waiting {{ oldestWaiting() }}
+            {{ oldestWaiting() === 1 ? 'day' : 'days' }}.
+          }
+        }
+      </p>
+    </div>
+  </header>
+
+  <!--
+    🔴 First on the page, above the queue counts, and absent entirely when
+    there is nothing wrong.
+
+    A partial completion means somebody was approved and cannot use the
+    product. It outranks a backlog: a backlog is work not started, this is work
+    that went wrong silently.
+  -->
+  <div style="--jp-enter-index: 1">
+    <app-orphaned-approvals />
+  </div>
+
+  <div class="stat-grid" style="--jp-enter-index: 2">
+    <!--
+      The margin rule goes on the tile that is a call to action, and only that
+      one. Making every tile shout is the same as making none of them shout.
+    -->
+    <a class="stat stat--link"
+       [class.card--marked]="oldestWaiting() >= 3"
+       [style.--jp-card-rule]="'var(--jp-danger)'"
+       routerLink="/verification/schools">
+      <span class="stat__label">Schools waiting</span>
+      <span class="stat__value">{{ schoolCount()?.pendingCount ?? 0 }}</span>
+      <span class="stat__meta">
+        @if (schoolCount(); as school) {
+          @if (school.pendingCount === 0) {
+            Nothing outstanding
+          } @else {
+            Oldest waiting {{ school.oldestWaitingDays }}
+            {{ school.oldestWaitingDays === 1 ? 'day' : 'days' }}
+          }
+        } @else {
+          Nothing outstanding
+        }
+      </span>
+    </a>
+
+    <a class="stat stat--link" routerLink="/verification/teachers">
+      <span class="stat__label">Teachers waiting</span>
+      <span class="stat__value">{{ teacherCount()?.pendingCount ?? 0 }}</span>
+      <span class="stat__meta">
+        @if (teacherCount(); as teacher) {
+          @if (teacher.pendingCount === 0) {
+            Nothing outstanding
+          } @else {
+            Oldest waiting {{ teacher.oldestWaitingDays }}
+            {{ teacher.oldestWaitingDays === 1 ? 'day' : 'days' }}
+          }
+        } @else {
+          Nothing outstanding
+        }
+      </span>
+    </a>
+
+    <div class="stat">
+      <span class="stat__label">Longest wait</span>
+      <span class="stat__value">
+        {{ oldestWaiting() }}<span class="stat__unit">{{ oldestWaiting() === 1 ? ' day' : ' days' }}</span>
+      </span>
+      <span class="stat__meta">Across everything still open</span>
+    </div>
+  </div>
+
+  <div class="dash-grid" style="--jp-enter-index: 3">
+    <section class="card">
+      <div class="card__header">
+        <div>
+          <h2 class="card__title">Waiting by type</h2>
+          <p class="card__subtitle">Everything the queue is holding</p>
+        </div>
+      </div>
+
+      <div class="card__body">
+        @if (loading()) {
+          <span class="skeleton" style="width: 100%; height: 1rem"></span>
+        } @else if (counts().length === 0) {
+          <p class="text-helper">Nothing has been submitted yet.</p>
+        } @else {
+          <ul class="breakdown">
+            @for (count of counts(); track count.requestTypeId) {
+              <li class="breakdown__row">
+                <span class="breakdown__label">{{ count.requestTypeName }}</span>
+                <span class="breakdown__value">{{ count.pendingCount }}</span>
+                <span class="breakdown__meta">
+                  @if (count.pendingCount === 0) {
+                    clear
+                  } @else {
+                    oldest {{ count.oldestWaitingDays }}d
+                  }
+                </span>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card__header">
+        <div>
+          <h2 class="card__title">Recently approved</h2>
+          <p class="card__subtitle">The last few that went through</p>
+        </div>
+      </div>
+
+      <div class="card__body">
+        @if (recent().length === 0) {
+          <p class="text-helper">
+            Nothing has been approved yet. It will show up here as decisions are made.
+          </p>
+        } @else {
+          <ul class="activity">
+            @for (item of recent(); track item.requestId) {
+              <li class="activity__row">
+                <a class="activity__name" [routerLink]="['/verification/requests', item.requestId]">
+                  {{ item.entityName ?? item.requestTypeName }}
+                </a>
+                <span class="activity__meta">
+                  {{ item.requestTypeName }} ·
+                  {{ (item.completedOn ?? item.submittedOn) | date: 'd MMM' }}
+                </span>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </section>
+  </div>
+</div>

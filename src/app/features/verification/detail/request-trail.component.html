@@ -1,0 +1,34 @@
+@if (entries().length === 0) {
+  <p class="text-helper">Nothing has happened to this request yet.</p>
+} @else {
+  <ol class="trail">
+    @for (entry of entries(); track entry.approvalId) {
+      <li class="trail__item">
+        <span [class]="'trail__dot ' + dot(entry.actionTypeId)" aria-hidden="true"></span>
+
+        <div class="trail__body">
+          <p class="trail__head">
+            <span class="trail__action">{{ entry.actionTypeName }}</span>
+            <span class="trail__level">level {{ entry.levelNumber }}</span>
+          </p>
+
+          <p class="trail__when">
+            {{ entry.actionOn | date: 'd MMM y, h:mm a' }} · user #{{ entry.actionByUserId }}
+          </p>
+
+          @if (entry.rejectionReasonName) {
+            <p class="trail__reason">{{ entry.rejectionReasonName }}</p>
+          }
+
+          <!--
+            What the applicant was actually told, set apart so it is findable
+            when somebody asks "what did we say to them?".
+          -->
+          @if (entry.remarks) {
+            <p class="trail__remarks">{{ entry.remarks }}</p>
+          }
+        </div>
+      </li>
+    }
+  </ol>
+}

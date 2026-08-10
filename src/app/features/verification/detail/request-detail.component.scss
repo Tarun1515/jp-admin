@@ -1,0 +1,243 @@
+@use 'variables' as v;
+@use 'mixins' as m;
+
+.detail__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: v.$space-2;
+  font-size: var(--jp-font-size-xs);
+  color: var(--jp-text-muted);
+
+  a { color: inherit; }
+}
+
+// Evidence on the left, decision on the right. The reviewer reads left to
+// right and acts at the end of that movement.
+.detail__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 21rem;
+  gap: v.$space-5;
+  align-items: start;
+}
+
+.detail__main,
+.detail__side {
+  @include m.flex-column(v.$space-5);
+
+  min-width: 0;
+}
+
+// -----------------------------------------------------------------------------
+// 🔴 THE OUTCOME BANNER
+//
+// A toast would be wrong here. A partial completion means somebody is approved
+// and cannot use the product, and it must stay on the screen until it is
+// dealt with — four seconds and a fade is how that gets missed.
+// -----------------------------------------------------------------------------
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: v.$space-4;
+  flex-wrap: wrap;
+  padding: v.$space-4;
+  padding-left: var(--jp-margin-rule-width);
+  position: relative;
+  background: var(--jp-surface);
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-lg);
+
+  // Same margin rule as the table rows. One product, one way of saying
+  // "this one needs you".
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--jp-margin-rule-width);
+    border-radius: var(--jp-radius-lg) 0 0 var(--jp-radius-lg);
+    background: var(--jp-notice-rule, var(--jp-border-strong));
+  }
+
+  > * { margin-left: v.$space-3; }
+}
+
+// Failure. The only red on this screen that is not a rejection.
+.notice--partial { --jp-notice-rule: var(--jp-danger); }
+
+// Not a failure — a decision recorded whose effect is a later phase. Blue,
+// because an admin who sees red here stops approving teachers and files a bug.
+.notice--not-yet { --jp-notice-rule: var(--jp-info, var(--jp-primary)); }
+
+.notice--pending { --jp-notice-rule: var(--jp-warning); }
+.notice--done    { --jp-notice-rule: var(--jp-success); }
+
+.notice__body { flex: 1 1 22rem; }
+
+.notice__title {
+  font-weight: var(--jp-font-weight-semibold);
+  color: var(--jp-text);
+}
+
+.notice__message {
+  margin-top: v.$space-1;
+  font-size: var(--jp-font-size-sm);
+  color: var(--jp-text-muted);
+  line-height: var(--jp-line-height-relaxed);
+}
+
+.notice__actions {
+  display: flex;
+  align-items: center;
+  gap: v.$space-2;
+  flex-wrap: wrap;
+}
+
+// -----------------------------------------------------------------------------
+// FACTS
+//
+// A definition list, not a table: these are label/value pairs, and a table
+// would promise a grid the content does not have.
+// -----------------------------------------------------------------------------
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: v.$space-3 v.$space-5;
+}
+
+.facts--stack { grid-template-columns: 1fr; }
+
+.facts__item {
+  min-width: 0;
+
+  &--wide { grid-column: 1 / -1; }
+
+  dt {
+    font-size: var(--jp-font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--jp-tracking-wide);
+    color: var(--jp-text-subtle);
+  }
+
+  dd {
+    margin-top: 2px;
+    font-size: var(--jp-font-size-sm);
+    color: var(--jp-text);
+    overflow-wrap: anywhere;
+  }
+}
+
+.facts__sub {
+  display: block;
+  font-size: var(--jp-font-size-xs);
+  color: var(--jp-text-muted);
+}
+
+// -----------------------------------------------------------------------------
+// DOCUMENTS
+// -----------------------------------------------------------------------------
+.docs__body { padding: 0; }
+
+.docs {
+  border-bottom: 1px solid var(--jp-border);
+}
+
+.docs__item {
+  display: flex;
+  align-items: center;
+  gap: v.$space-3;
+  padding: v.$space-3 v.$space-4;
+  border-bottom: var(--jp-rule-width) solid var(--jp-rule);
+
+  &:last-child { border-bottom: 0; }
+
+  &--active { background: var(--jp-surface-alt); }
+}
+
+.docs__pick {
+  @include m.focus-ring;
+
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.docs__name {
+  display: block;
+  font-size: var(--jp-font-size-sm);
+  font-weight: var(--jp-font-weight-medium);
+  color: var(--jp-text);
+}
+
+.docs__required {
+  margin-left: v.$space-2;
+  font-family: var(--jp-font-family-mono);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: var(--jp-tracking-wide);
+  color: var(--jp-text-subtle);
+}
+
+.docs__meta {
+  @include m.truncate;
+
+  display: block;
+  font-size: var(--jp-font-size-xs);
+  color: var(--jp-text-muted);
+}
+
+.docs__state {
+  display: flex;
+  align-items: center;
+  gap: v.$space-2;
+  flex-shrink: 0;
+}
+
+.docs__reason {
+  max-width: 12rem;
+  font-size: var(--jp-font-size-xs);
+  color: var(--jp-text-muted);
+}
+
+.docs__viewer { padding: v.$space-4; }
+
+// -----------------------------------------------------------------------------
+// DECISION
+// -----------------------------------------------------------------------------
+.decision__actions {
+  @include m.flex-column(v.$space-2);
+}
+
+.decision__warn {
+  margin-bottom: v.$space-3;
+  color: var(--jp-warning-text, var(--jp-text-muted));
+}
+
+.decision__note { margin-top: v.$space-3; }
+
+.reason-form { min-width: 0; }
+
+// -----------------------------------------------------------------------------
+// Below lg the side column goes underneath, decision FIRST.
+//
+// On a phone the reviewer has already scrolled through the documents; putting
+// the history above the buttons would make them scroll past it to act.
+// -----------------------------------------------------------------------------
+@include m.down(lg) {
+  .detail__grid { grid-template-columns: 1fr; }
+}
+
+@include m.down(md) {
+  .facts { grid-template-columns: 1fr; }
+
+  .docs__item {
+    flex-wrap: wrap;
+    row-gap: v.$space-2;
+  }
+
+  .docs__state { width: 100%; }
+
+  .notice > * { margin-left: v.$space-2; }
+}

@@ -1,0 +1,207 @@
+@use 'variables' as v;
+@use 'mixins' as m;
+
+// -----------------------------------------------------------------------------
+// TABS
+//
+// Underlined rather than pill-shaped. Two queues that are the same kind of
+// thing seen through different filters — pills would read as two destinations.
+// -----------------------------------------------------------------------------
+.tabs {
+  display: flex;
+  gap: v.$space-1;
+  border-bottom: 1px solid var(--jp-border);
+}
+
+.tabs__tab {
+  @include m.focus-ring;
+
+  padding: v.$space-2 v.$space-4;
+  border-bottom: 2px solid transparent;
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-sm);
+  font-weight: var(--jp-font-weight-medium);
+  text-decoration: none;
+
+  &:hover { color: var(--jp-text); }
+
+  &--active {
+    border-bottom-color: var(--jp-primary);
+    color: var(--jp-text);
+  }
+}
+
+// The filter strip sits directly on the sheet with no gap, so the page reads
+// as one continuous document rather than a control bar with a grid underneath.
+.filters {
+  display: flex;
+  align-items: center;
+  gap: v.$space-3;
+  flex-wrap: wrap;
+  padding: v.$space-3 v.$space-4;
+  background: var(--jp-surface);
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-lg);
+
+  .form-control {
+    min-height: 2.25rem;
+    font-size: var(--jp-font-size-sm);
+  }
+}
+
+.filters__search {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.filters__control {
+  flex: 0 1 11rem;
+  min-width: 0;
+
+  &--date { flex: 0 1 9.5rem; }
+}
+
+.filters__toggle {
+  display: flex;
+  align-items: center;
+  gap: v.$space-2;
+  font-size: var(--jp-font-size-sm);
+  white-space: nowrap;
+  cursor: pointer;
+
+  input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--jp-primary);
+  }
+}
+
+.filters__clear { margin-left: auto; }
+
+.queue__link {
+  @include m.tabular;
+
+  font-weight: var(--jp-font-weight-semibold);
+  color: var(--jp-text);
+  text-decoration: none;
+
+  &:hover { text-decoration: underline; }
+}
+
+.queue__entity {
+  @include m.truncate;
+
+  max-width: 22rem;
+}
+
+.queue__waiting {
+  @include m.tabular;
+
+  font-size: var(--jp-font-size-xs);
+  color: var(--jp-text-muted);
+
+  // Red is the only emphasis in this column, and it appears only where the
+  // margin rule already is.
+  .row--attention & {
+    color: var(--jp-danger-text);
+    font-weight: var(--jp-font-weight-semibold);
+  }
+}
+
+.queue__attention-note { color: var(--jp-danger-text); }
+
+.table-pager__gap {
+  padding: 0 v.$space-1;
+  color: var(--jp-text-subtle);
+}
+
+// -----------------------------------------------------------------------------
+// Below md the table stops being a table.
+//
+// Six columns cannot be read on a 375px screen and scrolling sideways through
+// them is worse than useless. The same rows become ruled entries — same
+// rhythm, same margin rule — in the order somebody scanning a phone reads:
+// who it is, how long they have waited, then the facts.
+//
+//   [ school name ................... waiting ]
+//   [ REG-SCH-2026-00007 ...................... ]
+//   [ 2 Aug · L1 · Pending .................... ]
+// -----------------------------------------------------------------------------
+@include m.down(md) {
+  .table {
+    thead { display: none; }
+
+    tbody tr {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: v.$space-1 v.$space-2;
+      padding: v.$space-3 v.$space-4;
+      border-bottom: var(--jp-rule-width) solid var(--jp-rule);
+      box-shadow: inset var(--jp-margin-rule-width) 0 0 var(--jp-row-rule, transparent);
+    }
+
+    tbody tr:last-child { border-bottom: 0; }
+
+    tbody td {
+      display: block;
+      height: auto;
+      padding: 0;
+      border: 0;
+      box-shadow: none;
+      text-align: left;
+    }
+
+    // 2 school or teacher — the line people actually scan for
+    tbody td:nth-child(2) {
+      flex: 1 1 auto;
+      order: 0;
+      max-width: none;
+      font-size: var(--jp-font-size-base);
+      font-weight: var(--jp-font-weight-semibold);
+      color: var(--jp-text);
+    }
+
+    // 6 waiting — pushed to the far edge of the same line
+    tbody td:nth-child(6) {
+      flex: 0 0 auto;
+      order: 1;
+      margin-left: auto;
+      text-align: right;
+    }
+
+    // 1 request number — its own line, in the register's quieter hand
+    tbody td:nth-child(1) {
+      flex: 1 0 100%;
+      order: 2;
+      font-size: var(--jp-font-size-xs);
+    }
+
+    // 3 submitted · 4 level · 5 status — one meta line, middot separated
+    tbody td:nth-child(3),
+    tbody td:nth-child(4),
+    tbody td:nth-child(5) {
+      flex: 0 0 auto;
+      order: 3;
+      font-size: var(--jp-font-size-xs);
+      color: var(--jp-text-muted);
+    }
+
+    tbody td:nth-child(4)::before,
+    tbody td:nth-child(5)::before {
+      content: '·';
+      margin-right: v.$space-2;
+      color: var(--jp-text-subtle);
+    }
+  }
+
+  .filters { gap: v.$space-2; }
+
+  .filters__control { flex: 1 1 calc(50% - #{v.$space-2}); }
+
+  .filters__toggle { flex: 1 0 100%; }
+
+  .filters__clear { margin-left: 0; }
+
+  .tabs__tab { flex: 1; text-align: center; }
+}
