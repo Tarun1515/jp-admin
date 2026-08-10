@@ -1,10 +1,8 @@
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { JP_API_CONFIG, SKIP_LOADER } from 'jp-shared/core';
-import { ApiResponse } from 'jp-shared/models';
+import { ApiResponse, VerifyDocumentBody } from 'jp-shared/models';
 import { Observable } from 'rxjs';
-
-import { VerifyDocumentBody } from './approval.models';
 
 /**
  * Request documents.

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { RouterLink } from '@angular/router';
 import { ToastService } from 'jp-shared/core';
 
-import { OrphanedApproval } from '../../core/approval.models';
+import { OrphanedApproval } from 'jp-shared/models';
 import { ApprovalService } from '../../core/approval.service';
 
 /**

@@ -91,45 +91,6 @@
   flex-wrap: wrap;
 }
 
-// -----------------------------------------------------------------------------
-// FACTS
-//
-// A definition list, not a table: these are label/value pairs, and a table
-// would promise a grid the content does not have.
-// -----------------------------------------------------------------------------
-.facts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: v.$space-3 v.$space-5;
-}
-
-.facts--stack { grid-template-columns: 1fr; }
-
-.facts__item {
-  min-width: 0;
-
-  &--wide { grid-column: 1 / -1; }
-
-  dt {
-    font-size: var(--jp-font-size-xs);
-    text-transform: uppercase;
-    letter-spacing: var(--jp-tracking-wide);
-    color: var(--jp-text-subtle);
-  }
-
-  dd {
-    margin-top: 2px;
-    font-size: var(--jp-font-size-sm);
-    color: var(--jp-text);
-    overflow-wrap: anywhere;
-  }
-}
-
-.facts__sub {
-  display: block;
-  font-size: var(--jp-font-size-xs);
-  color: var(--jp-text-muted);
-}
 
 // -----------------------------------------------------------------------------
 // DOCUMENTS
@@ -230,8 +191,6 @@
 }
 
 @include m.down(md) {
-  .facts { grid-template-columns: 1fr; }
-
   .docs__item {
     flex-wrap: wrap;
     row-gap: v.$space-2;

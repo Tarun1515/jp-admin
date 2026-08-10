@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-import { ACTION_TYPE, RequestAction } from '../../../core/approval.models';
+import { ACTION_TYPE, RequestAction } from 'jp-shared/models';
 
 /**
  * The action trail as a timeline.

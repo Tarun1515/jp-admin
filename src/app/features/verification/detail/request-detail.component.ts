@@ -4,17 +4,19 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ConfirmDialogService, MasterService, ToastService } from 'jp-shared/core';
-import { ERROR_CODES, Lookup, MASTER_KEYS } from 'jp-shared/models';
-import { UiModalComponent } from 'jp-shared/ui';
-
 import {
   ACTION_TYPE,
   APPROVAL_STATUS,
   ApprovalDetail,
+  ERROR_CODES,
+  Lookup,
+  MASTER_KEYS,
   ProcessActionResult,
   REQUEST_TYPE,
   RequestDocument,
-} from '../../../core/approval.models';
+} from 'jp-shared/models';
+import { UiModalComponent } from 'jp-shared/ui';
+
 import { ApprovalService } from '../../../core/approval.service';
 import { DocumentService } from '../../../core/document.service';
 import { OutcomeNotice, describeOutcome } from '../../../core/orchestration-outcome';

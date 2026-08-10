@@ -1,10 +1,8 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { JP_API_CONFIG } from 'jp-shared/core';
-import { ApiResponse } from 'jp-shared/models';
-import { Observable, map } from 'rxjs';
-
 import {
+  ApiResponse,
   ApprovalDetail,
   ApprovalFilter,
   ApprovalListItem,
@@ -12,7 +10,8 @@ import {
   PendingCount,
   ProcessActionBody,
   ProcessActionResult,
-} from './approval.models';
+} from 'jp-shared/models';
+import { Observable, map } from 'rxjs';
 
 /** One page of the queue, plus the count before paging. */
 export interface ApprovalPage {

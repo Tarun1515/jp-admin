@@ -2,12 +2,7 @@ import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-import {
-  APPROVAL_STATUS,
-  ApprovalListItem,
-  PendingCount,
-  REQUEST_TYPE,
-} from '../../core/approval.models';
+import { APPROVAL_STATUS, ApprovalListItem, PendingCount, REQUEST_TYPE } from 'jp-shared/models';
 import { ApprovalService } from '../../core/approval.service';
 import { OrphanedApprovalsComponent } from './orphaned-approvals.component';
 

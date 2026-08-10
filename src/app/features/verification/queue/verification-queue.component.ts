@@ -3,9 +3,14 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService, MasterService } from 'jp-shared/core';
-import { Lookup, MASTER_KEYS } from 'jp-shared/models';
+import {
+  APPROVAL_STATUS,
+  ApprovalListItem,
+  Lookup,
+  MASTER_KEYS,
+  REQUEST_TYPE,
+} from 'jp-shared/models';
 
-import { ApprovalListItem, APPROVAL_STATUS, REQUEST_TYPE } from '../../../core/approval.models';
 import { ApprovalService } from '../../../core/approval.service';
 
 const PAGE_SIZE = 20;

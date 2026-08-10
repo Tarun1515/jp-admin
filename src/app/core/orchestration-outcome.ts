@@ -1,4 +1,4 @@
-import { ProcessActionResult, REQUEST_TYPE } from './approval.models';
+import { ProcessActionResult, REQUEST_TYPE } from 'jp-shared/models';
 
 /**
  * What kind of thing just happened.
