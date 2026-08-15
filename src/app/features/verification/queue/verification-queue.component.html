@@ -88,19 +88,35 @@
     </div>
 
     <!--
-      "Assigned to me" rather than a person picker: the filter the server takes
-      is a single user id, and the only id this screen can be sure of is the
-      person using it. A dropdown of every admin needs a user list endpoint that
-      does not exist yet — see the known gaps.
+      🔴 THE ASSIGNEE FILTER — G15, closed in 3G.
+
+      This was a single "Assigned to me" checkbox, because the only identity the
+      screen could name was its own, and "unassigned" could not be expressed at
+      all: the server's filter took a user id, and null there already meant
+      "anyone".
+
+      UNASSIGNED IS THE FIRST OPTION AFTER "Anyone", and it is the point of the
+      control. A request nobody has picked up is the one most likely to be
+      forgotten — everything else has somebody accountable for it.
     -->
-    <label class="filters__toggle">
-      <input
-        type="checkbox"
-        [ngModel]="mineOnly()"
-        (ngModelChange)="mineOnly.set($event); onFilterChange()"
-      />
-      <span>Assigned to me</span>
-    </label>
+    <div class="filters__control">
+      <label class="visually-hidden" for="queue-assignee">Assigned to</label>
+      <select
+        class="form-control"
+        id="queue-assignee"
+        [ngModel]="assignee()"
+        (ngModelChange)="assignee.set($event); onFilterChange()"
+      >
+        <option value="">Anyone</option>
+        <option value="none">Unassigned</option>
+        @if (currentUserUid()) {
+          <option [value]="currentUserUid()">Assigned to me</option>
+        }
+        @for (admin of otherAdmins(); track admin.userUid) {
+          <option [value]="admin.userUid">{{ admin.email }}</option>
+        }
+      </select>
+    </div>
 
     @if (hasFilters()) {
       <button type="button" class="btn btn--ghost btn--sm filters__clear" (click)="clearFilters()">

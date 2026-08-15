@@ -11,6 +11,7 @@ import {
   REQUEST_TYPE,
 } from 'jp-shared/models';
 
+import { AdminUser, AdminUserService } from '../../../core/admin-user.service';
 import { ApprovalService } from '../../../core/approval.service';
 
 const PAGE_SIZE = 20;
@@ -62,6 +63,7 @@ type SortDirection = 'ASC' | 'DESC';
 export class VerificationQueueComponent {
   private readonly approvals = inject(ApprovalService);
   private readonly masters = inject(MasterService);
+  private readonly adminUsers = inject(AdminUserService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
@@ -82,7 +84,25 @@ export class VerificationQueueComponent {
   protected readonly statusId = signal<number | ''>(APPROVAL_STATUS.pending);
   protected readonly fromDate = signal('');
   protected readonly toDate = signal('');
-  protected readonly mineOnly = signal(false);
+
+  /**
+   * Who the queue is filtered to: '' anyone · 'none' unassigned · a user Uid.
+   *
+   * 🔴 G15, closed in 3G. This was a boolean "assigned to me", for two reasons
+   * that were both fixed rather than worked around:
+   *
+   *   the server took a numeric jp_sso user id, and the only one this screen
+   *   could be sure of was its own — so a colleague could not be named;
+   *
+   *   "unassigned" had no representation at all, because null on the assignee
+   *   filter already meant "anyone". It has its own flag now.
+   *
+   * ⚠️ 'none' is a sentinel rather than a Uid because it is a different KIND of
+   * answer: every other value names somebody, and this one names the absence of
+   * anybody. Encoding it as an empty Uid would make it one bad comparison away
+   * from meaning "everyone".
+   */
+  protected readonly assignee = signal<string>('');
 
   protected readonly page = signal(1);
   protected readonly sortBy = signal<string | undefined>(undefined);
@@ -102,6 +122,14 @@ export class VerificationQueueComponent {
   protected readonly total = signal(0);
   protected readonly loading = signal(true);
   protected readonly statuses = signal<Lookup[]>([]);
+  protected readonly admins = signal<AdminUser[]>([]);
+
+  protected readonly currentUserUid = computed(() => this.auth.currentUser()?.userUid ?? null);
+
+  /** Everyone except the person reading — they already have "Assigned to me". */
+  protected readonly otherAdmins = computed(() =>
+    this.admins().filter((admin) => admin.userUid !== this.currentUserUid()),
+  );
 
   protected readonly pageSize = PAGE_SIZE;
 
@@ -119,7 +147,7 @@ export class VerificationQueueComponent {
       this.statusId() !== APPROVAL_STATUS.pending ||
       !!this.fromDate() ||
       !!this.toDate() ||
-      this.mineOnly(),
+      !!this.assignee(),
   );
 
   /** How many rows on this page have been waiting too long. Drives the toolbar count. */
@@ -135,6 +163,14 @@ export class VerificationQueueComponent {
       error: () => this.statuses.set([]),
     });
 
+    this.adminUsers.list().subscribe({
+      next: (users) => this.admins.set(users),
+      // Same reasoning. Without the list the filter still offers Anyone,
+      // Unassigned and Me — which is every option that existed before 3G plus
+      // the one that was missing.
+      error: () => this.admins.set([]),
+    });
+
     /*
       One effect, reading every signal the query depends on. Switching tab,
       changing a filter or turning a page all land here, so there is exactly
@@ -143,10 +179,21 @@ export class VerificationQueueComponent {
     effect(() => {
       this.reloadToken();
 
+      const assignee = this.assignee();
+
       const filter = {
         requestTypeId: this.requestTypeId(),
         statusId: this.statusId() === '' ? undefined : Number(this.statusId()),
-        assignedToUserId: this.mineOnly() ? this.currentUserId() : undefined,
+
+        /*
+          ⚠️ ONE of these, never both. The server refuses a request carrying
+          both rather than picking a winner, and it is right to: they are one
+          control here, so sending both would mean this component had lost track
+          of what it was asking.
+        */
+        unassignedOnly: assignee === 'none' ? true : undefined,
+        assignedToUserUid: assignee && assignee !== 'none' ? assignee : undefined,
+
         fromDate: this.fromDate() || undefined,
         toDate: this.toDate() || undefined,
         search: this.search().trim() || undefined,
@@ -174,10 +221,6 @@ export class VerificationQueueComponent {
         },
       });
     });
-  }
-
-  private currentUserId(): number | undefined {
-    return this.auth.currentUser()?.userId;
   }
 
   /**
@@ -249,7 +292,7 @@ export class VerificationQueueComponent {
     this.statusId.set(APPROVAL_STATUS.pending);
     this.fromDate.set('');
     this.toDate.set('');
-    this.mineOnly.set(false);
+    this.assignee.set('');
     this.page.set(1);
   }
 
