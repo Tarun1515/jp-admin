@@ -1,0 +1,339 @@
+@use 'variables' as v;
+@use 'mixins' as m;
+
+// -----------------------------------------------------------------------------
+// PLAN x FEATURE MATRIX
+//
+// Ruled rather than zebra-striped, following the applicants table and the
+// verification queue: one product, one table grammar (2.38).
+//
+// Nothing here defines a colour or a size of its own — every value is a token
+// (2.23). A one-off hex on an admin screen is how a second palette starts.
+// -----------------------------------------------------------------------------
+
+.page__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: v.$space-4;
+  margin-bottom: v.$space-4;
+}
+
+.page__subtitle {
+  max-width: 46ch;
+  margin-top: v.$space-1;
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-sm);
+}
+
+// The incident banner. Loud on purpose — if a feature is off, that is the first
+// thing the person needs to know.
+.banner {
+  padding: v.$space-3 v.$space-4;
+  margin-bottom: v.$space-4;
+  border-radius: var(--jp-radius-lg);
+  font-size: var(--jp-font-size-sm);
+
+  &--alert {
+    background: var(--jp-danger-soft);
+    border: 1px solid var(--jp-danger);
+    color: var(--jp-text);
+  }
+}
+
+.tabs {
+  display: flex;
+  gap: v.$space-1;
+  margin-bottom: v.$space-4;
+  border-bottom: 1px solid var(--jp-border);
+}
+
+.tabs__tab {
+  @include m.focus-ring;
+
+  padding: v.$space-2 v.$space-4;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-sm);
+  font-weight: var(--jp-font-weight-medium);
+  cursor: pointer;
+
+  &:hover { color: var(--jp-text); }
+
+  &--active {
+    border-bottom-color: var(--jp-primary);
+    color: var(--jp-text);
+  }
+}
+
+.state {
+  padding: v.$space-6;
+  color: var(--jp-text-muted);
+  text-align: center;
+
+  &--error { color: var(--jp-danger); }
+}
+
+/*
+  🔴 The table scrolls inside its own box. The page body must never scroll
+  sideways — a plan column added later must not break the layout at 375.
+
+  ⚠️ `contain: paint` IS LOAD-BEARING, and it took a measurement to find out.
+
+  `overflow-x: auto` alone was not enough. At 375 the page still reported 70px
+  of horizontal scroll even though EVERY box in the chain measured 375 or less,
+  `main` already carried `overflow-x: hidden`, and no element's right edge
+  crossed the viewport. body.scrollWidth was a correct 375 while
+  documentElement.scrollWidth was 445 — the table's 592px of content was still
+  being counted into the document's scroll area despite being clipped.
+
+  Four other candidates were measured and none of them moved it: min-width: 0
+  on the scroller, max-width: 100%, width: max-content on the table, and
+  display: block on the component host.
+
+  `contain: paint` states the thing that is simply true here — nothing inside
+  this box is ever painted outside it — and that is what lets the browser stop
+  counting the overflow. It is not a hack for a layout bug; it is the missing
+  half of the declaration.
+*/
+.matrix__scroll {
+  overflow-x: auto;
+  contain: paint;
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-lg);
+  background: var(--jp-surface);
+}
+
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--jp-font-size-sm);
+
+  th,
+  td {
+    padding: v.$space-3;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--jp-border);
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    background: var(--jp-surface-alt);
+    color: var(--jp-text-muted);
+    font-size: var(--jp-font-size-xs);
+    font-weight: var(--jp-font-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child th,
+  tbody tr:last-child td { border-bottom: 0; }
+}
+
+.matrix__corner { min-width: 14rem; }
+.matrix__gating { min-width: 12rem; }
+.matrix__plan   { min-width: 11rem; }
+
+.matrix__plan-name {
+  display: block;
+  color: var(--jp-text);
+  font-size: var(--jp-font-size-sm);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.matrix__plan-code {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--jp-font-family-mono);
+  font-size: var(--jp-font-size-xs);
+  font-weight: var(--jp-font-weight-normal);
+  text-transform: none;
+}
+
+.matrix__feature { font-weight: var(--jp-font-weight-normal); }
+
+.matrix__feature-name {
+  display: block;
+  color: var(--jp-text);
+  font-weight: var(--jp-font-weight-medium);
+}
+
+.matrix__feature-code {
+  display: block;
+  margin-top: 2px;
+  color: var(--jp-text-muted);
+  font-family: var(--jp-font-family-mono);
+  font-size: var(--jp-font-size-xs);
+}
+
+.matrix__feature-desc {
+  display: block;
+  max-width: 28ch;
+  margin-top: v.$space-1;
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-xs);
+}
+
+/*
+  🔴 THE SWITCHED-OFF ROW.
+
+  Tinted AND struck through AND labelled. Three carriers, because this is the
+  state somebody scans for during an incident — and because colour alone fails
+  for anyone who cannot distinguish it.
+*/
+.matrix__row--off {
+  background: var(--jp-surface-alt);
+
+  .matrix__feature-name,
+  .cell__label {
+    text-decoration: line-through;
+    color: var(--jp-text-muted);
+  }
+}
+
+.matrix__mode { width: 100%; }
+
+// The kill switch. Deliberately shaped nothing like the mode dropdown beside
+// it — two questions, two controls, and they must not look interchangeable.
+.killswitch {
+  display: flex;
+  align-items: center;
+  gap: v.$space-2;
+  margin-top: v.$space-2;
+  cursor: pointer;
+}
+
+.killswitch__input {
+  @include m.visually-hidden;
+}
+
+.killswitch__track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.25rem;
+  height: 1.25rem;
+  background: var(--jp-border-strong);
+  border-radius: 999px;
+  transition: background var(--jp-transition-fast);
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 1rem;
+    height: 1rem;
+    background: var(--jp-surface);
+    border-radius: 50%;
+    transition: transform var(--jp-transition-fast);
+  }
+}
+
+.killswitch__input:checked + .killswitch__track {
+  background: var(--jp-success);
+
+  &::after { transform: translateX(1rem); }
+}
+
+.killswitch__input:focus-visible + .killswitch__track {
+  outline: 2px solid var(--jp-focus-ring);
+  outline-offset: 2px;
+}
+
+.killswitch__label {
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-xs);
+}
+
+.matrix__cell {
+  display: table-cell;
+
+  // 🔴 Unmapped is the state most likely to be misread as "nothing". It gets a
+  // left rule so the eye finds it while scanning a column.
+  &--unmapped {
+    border-left: 2px solid var(--jp-warning);
+  }
+
+  &--excluded .cell__label { color: var(--jp-text-muted); }
+
+  &--free { color: var(--jp-text-muted); }
+}
+
+.cell__label {
+  display: block;
+  margin-bottom: v.$space-2;
+  color: var(--jp-text);
+}
+
+.cell__hint {
+  display: block;
+  margin-top: v.$space-1;
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-xs);
+}
+
+.cell__na {
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-xs);
+  font-style: italic;
+}
+
+.cell__check {
+  display: flex;
+  align-items: center;
+  gap: v.$space-2;
+  margin-bottom: v.$space-2;
+  cursor: pointer;
+}
+
+.cell__quota { width: 7rem; }
+
+.legend {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: v.$space-2 v.$space-4;
+  margin-top: v.$space-4;
+  padding: v.$space-4;
+  background: var(--jp-surface-alt);
+  border-radius: var(--jp-radius-lg);
+  font-size: var(--jp-font-size-xs);
+}
+
+.legend__term {
+  color: var(--jp-text);
+  font-weight: var(--jp-font-weight-semibold);
+  white-space: nowrap;
+
+  &--unmapped { color: var(--jp-warning-text); }
+  &--off { color: var(--jp-danger); }
+}
+
+.legend__desc {
+  margin: 0;
+  color: var(--jp-text-muted);
+}
+
+.sr-only {
+  @include m.visually-hidden;
+}
+
+// -----------------------------------------------------------------------------
+// NARROW
+//
+// The grid keeps its shape and scrolls; it is a grid, and stacking it into
+// cards would lose the comparison that is the entire reason to look at it.
+// -----------------------------------------------------------------------------
+@media (max-width: 40rem) {
+  .page__head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .legend { grid-template-columns: 1fr; }
+}

@@ -112,6 +112,23 @@ export const routes: Routes = [
           ),
         data: { title: 'Verification request' },
       },
+      /*
+        Phase 2.5 — the entitlement matrix.
+
+        ⚠️ Gated on SETTINGS.MANAGE on the SERVER. There is no permissionGuard
+        here because hiding a route is presentation: the menu row carries the
+        same permission, so a person without it never sees the link, and if they
+        type the URL the API refuses. Protection is the API's job.
+      */
+      {
+        path: 'settings/plans',
+        loadComponent: () =>
+          import('./features/entitlements/matrix/entitlement-matrix.component').then(
+            (m) => m.EntitlementMatrixComponent,
+          ),
+        data: { title: 'Plans and features' },
+      },
+
       { path: 'moderation/jobs', loadComponent: comingSoon, data: { title: 'Job moderation' } },
       { path: 'moderation/reports', loadComponent: comingSoon, data: { title: 'Reports' } },
       { path: 'users', loadComponent: comingSoon, data: { title: 'Users' } },

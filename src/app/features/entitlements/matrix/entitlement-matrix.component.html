@@ -1,0 +1,238 @@
+<!--
+  The plan × feature matrix.
+
+  🔴 Every cell carries a WORD. A blank cell would read as "zero" or as
+  "nothing here"; the engine reads a missing mapping as DENIED, and the screen
+  has to say the same thing.
+-->
+<header class="page__head">
+  <div>
+    <h1 class="page__title">Plans and features</h1>
+    <p class="page__subtitle">
+      What each plan includes, and how each feature is gated. Changes are live on
+      the next use — there is nothing to publish and nothing to wait for.
+    </p>
+  </div>
+
+  <button type="button" class="btn btn--ghost" (click)="load()" [disabled]="loading()">
+    Refresh
+  </button>
+</header>
+
+@if (disabledCount() > 0) {
+  <!--
+    The kill switch is the loudest state on this screen. If something is off,
+    that is the first thing the person needs to know — usually because they are
+    here in the middle of an incident.
+  -->
+  <p class="banner banner--alert" role="status">
+    <strong>{{ disabledCount() }}</strong>
+    {{ disabledCount() === 1 ? 'feature is' : 'features are' }} switched off right now.
+    Nobody can use {{ disabledCount() === 1 ? 'it' : 'them' }}, on any plan.
+  </p>
+}
+
+<div class="tabs" role="tablist">
+  <button
+    type="button"
+    role="tab"
+    class="tabs__tab"
+    [class.tabs__tab--active]="userTypeId() === 2"
+    [attr.aria-selected]="userTypeId() === 2"
+    (click)="userTypeId.set(2)"
+  >
+    School plans
+  </button>
+  <button
+    type="button"
+    role="tab"
+    class="tabs__tab"
+    [class.tabs__tab--active]="userTypeId() === 3"
+    [attr.aria-selected]="userTypeId() === 3"
+    (click)="userTypeId.set(3)"
+  >
+    Teacher plans
+  </button>
+</div>
+
+@if (loading()) {
+  <p class="state">Loading …</p>
+} @else if (failed()) {
+  <p class="state state--error">
+    Plans and features could not be loaded. Nothing has been changed.
+  </p>
+} @else if (rows().length === 0) {
+  <p class="state">No features apply to this kind of account.</p>
+} @else {
+  <div class="matrix__scroll">
+    <table class="matrix">
+      <caption class="sr-only">
+        Features down the side, plans across the top. Each cell says what that
+        plan grants for that feature.
+      </caption>
+
+      <thead>
+        <tr>
+          <th scope="col" class="matrix__corner">Feature</th>
+          <th scope="col" class="matrix__gating">How it is gated</th>
+          @for (plan of plans(); track plan.planId) {
+            <th scope="col" class="matrix__plan">
+              <span class="matrix__plan-name">{{ plan.name }}</span>
+              <span class="matrix__plan-code">{{ plan.planCode }}</span>
+            </th>
+          }
+        </tr>
+      </thead>
+
+      <tbody>
+        @for (row of rows(); track row.feature.featureId) {
+          <!--
+            🔴 The switched-off row is tinted and struck through, not merely
+            marked with a word. This state has to be readable at a glance.
+          -->
+          <tr [class.matrix__row--off]="!row.feature.isActive">
+            <th scope="row" class="matrix__feature">
+              <span class="matrix__feature-name">{{ row.feature.name }}</span>
+              <code class="matrix__feature-code">{{ row.feature.featureCode }}</code>
+              @if (row.feature.description) {
+                <span class="matrix__feature-desc">{{ row.feature.description }}</span>
+              }
+            </th>
+
+            <td class="matrix__gating">
+              <!--
+                Two controls, deliberately. The dropdown answers "how is access
+                decided"; the switch answers "does this exist right now".
+
+                A single four-option dropdown would destroy the mode when
+                something is switched off, and restoring it would depend on
+                somebody remembering what it used to be — mid-incident.
+              -->
+              <label class="sr-only" [attr.for]="'mode-' + row.feature.featureId">
+                Gating mode for {{ row.feature.name }}
+              </label>
+              <select
+                class="form-control matrix__mode"
+                [id]="'mode-' + row.feature.featureId"
+                [value]="row.feature.gatingModeId"
+                [disabled]="isSaving(featureKey(row.feature))"
+                (change)="onModeChange(row.feature, $any($event.target).value)"
+              >
+                @for (mode of gatingModes(); track mode.gatingModeId) {
+                  <option [value]="mode.gatingModeId">{{ mode.name }}</option>
+                }
+              </select>
+
+              <label class="killswitch">
+                <input
+                  type="checkbox"
+                  class="killswitch__input"
+                  [checked]="row.feature.isActive"
+                  [disabled]="isSaving(featureKey(row.feature))"
+                  (change)="onKillSwitch(row.feature, $any($event.target).checked)"
+                />
+                <span class="killswitch__track" aria-hidden="true"></span>
+                <span class="killswitch__label">
+                  {{ row.feature.isActive ? 'Available' : 'Switched off' }}
+                </span>
+              </label>
+            </td>
+
+            @for (cell of row.cells; track cellKey(cell)) {
+              <td
+                class="matrix__cell"
+                [class.matrix__cell--unmapped]="cell.state === 'unmapped'"
+                [class.matrix__cell--excluded]="cell.state === 'excluded'"
+                [class.matrix__cell--free]="cell.state === 'free'"
+              >
+                @if (!canMap(cell)) {
+                  <!--
+                    2.62: "not allowed", so no control at all and the reason in
+                    its place. A greyed-out button here would read as broken.
+                  -->
+                  <span class="cell__na">Different kind of account</span>
+                } @else if (cell.state === 'free') {
+                  <span class="cell__label">{{ cell.label }}</span>
+                  <span class="cell__hint">No mapping is read</span>
+                } @else if (cell.state === 'unmapped') {
+                  <span class="cell__label">{{ cell.label }}</span>
+                  <button
+                    type="button"
+                    class="btn btn--sm"
+                    [disabled]="isSaving(cellKey(cell))"
+                    (click)="onMap(cell)"
+                  >
+                    Map
+                  </button>
+                } @else if (cell.feature.gatingModeId === MODE.boolean) {
+                  <label class="cell__check">
+                    <input
+                      type="checkbox"
+                      [checked]="cell.mapping?.isIncluded"
+                      [disabled]="isSaving(cellKey(cell))"
+                      (change)="onIncludedChange(cell, $any($event.target).checked)"
+                    />
+                    <span>{{ cell.label }}</span>
+                  </label>
+                  <button
+                    type="button"
+                    class="btn btn--sm btn--ghost"
+                    [disabled]="isSaving(cellKey(cell))"
+                    (click)="onUnmap(cell)"
+                  >
+                    Unmap
+                  </button>
+                } @else {
+                  <label class="sr-only" [attr.for]="'q-' + cellKey(cell)">
+                    Monthly quota for {{ cell.feature.name }} on {{ cell.plan.name }}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    class="form-control cell__quota"
+                    [id]="'q-' + cellKey(cell)"
+                    [value]="cell.mapping?.quotaPerPeriod ?? ''"
+                    placeholder="Unlimited"
+                    [disabled]="isSaving(cellKey(cell))"
+                    (change)="onQuotaChange(cell, $any($event.target).value)"
+                  />
+                  <span class="cell__hint">{{ cell.label }}</span>
+                  <button
+                    type="button"
+                    class="btn btn--sm btn--ghost"
+                    [disabled]="isSaving(cellKey(cell))"
+                    (click)="onUnmap(cell)"
+                  >
+                    Unmap
+                  </button>
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!--
+    The legend is not decoration. "Unmapped" is the state most likely to be
+    misread, and it is the one that denies.
+  -->
+  <dl class="legend">
+    <dt class="legend__term legend__term--unmapped">Unmapped</dt>
+    <dd class="legend__desc">
+      No decision has been recorded, and the engine refuses. Adding a feature
+      grants it to nobody until it is mapped.
+    </dd>
+
+    <dt class="legend__term">Free</dt>
+    <dd class="legend__desc">Ungated. No mapping is read and nothing is metered.</dd>
+
+    <dt class="legend__term legend__term--off">Switched off</dt>
+    <dd class="legend__desc">
+      The kill switch. Outranks every plan — nobody can use the feature while it
+      is off, and turning it back on restores the mode untouched.
+    </dd>
+  </dl>
+}
