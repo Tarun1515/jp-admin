@@ -1,0 +1,270 @@
+<div class="page enter">
+  <header class="page__header">
+    <div class="page__heading">
+      <h1 class="page__title">Payments</h1>
+      <p class="page__description">
+        Plan changes waiting for confirmation that the money arrived. Oldest
+        first.
+      </p>
+    </div>
+  </header>
+
+  <!--
+    🔴 THE OUTCOME OF THE LAST CONFIRMATION, AND IT DISTINGUISHES TWO THINGS.
+
+    Verification and activation are in two databases with no distributed
+    transaction (2.2, 2.48), so "recorded" and "active" can genuinely differ.
+    Reporting one as the other is how a payment gets entered twice.
+  -->
+  @if (outcome(); as result) {
+    @if (result.activationCompleted) {
+      <div class="banner banner--success" role="status">
+        <div>
+          <strong>
+            Confirmed{{ result.receiptNo ? ' — receipt ' + result.receiptNo : '' }}.
+          </strong>
+          <p>
+            {{ result.planName }} is active
+            @if (result.endsOn) { until {{ day(result.endsOn) }} }.
+            @if (result.alreadyVerified) {
+              This payment had already been confirmed, so nothing was charged
+              or activated twice.
+            }
+          </p>
+        </div>
+      </div>
+    } @else {
+      <!--
+        🔴 THE HALF-COMPLETED STATE, SAID PLAINLY.
+
+        The money IS recorded — that half is committed and is never rolled
+        back, because the payment really did arrive. What failed is the
+        activation, and the fix is submitting the same form again: both halves
+        are idempotent (6.5-A). An admin told only "something went wrong"
+        would reasonably try to record the payment a second time.
+      -->
+      <div class="banner banner--warning" role="alert">
+        <div>
+          <strong>The payment is recorded, but the plan is not active yet.</strong>
+          <p>
+            {{ result.activationError ?? 'The plan could not be activated.' }}
+          </p>
+          <p>
+            <strong>Confirm it again</strong> — the money will not be recorded
+            twice, and the second attempt completes the activation.
+          </p>
+        </div>
+      </div>
+    }
+  }
+
+  @if (loading()) {
+    <p class="table__loading">Loading …</p>
+  } @else if (failed()) {
+    <!--
+      🔴 A FAILED READ IS NOT AN EMPTY QUEUE. "Nothing is waiting" and "we
+      could not ask" are different statements, and showing the first when the
+      second is true is how a school's payment sits unconfirmed for a week.
+    -->
+    <p class="note" role="alert">
+      The payments queue could not be loaded. Nothing has been missed — try
+      again in a moment.
+    </p>
+  } @else if (rows().length === 0) {
+    <p class="note">
+      No payments are waiting. When a school or a teacher asks to change plan,
+      it appears here.
+    </p>
+  } @else {
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Reference</th>
+            <th scope="col">Account</th>
+            <th scope="col">Plan</th>
+            <th scope="col">Expected</th>
+            <th scope="col">Mode</th>
+            <th scope="col">Asked</th>
+            <th scope="col"><span class="visually-hidden">Confirm</span></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (row of rows(); track row.paymentId) {
+            <tr>
+              <td><code>{{ row.requestNo }}</code></td>
+              <td>{{ accountKind(row) }}</td>
+              <td>{{ row.planName }}</td>
+              <td class="pay__amount">{{ money(row.priceQuoted) }}</td>
+              <td>{{ row.paymentModeName }}</td>
+              <td>{{ day(row.submittedOn) }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="btn btn--sm btn--primary"
+                  (click)="start(row)"
+                >
+                  Confirm payment
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (total() > rows().length) {
+      <p class="note">
+        Showing {{ rows().length }} of {{ total() }}.
+      </p>
+    }
+  }
+
+  <!-- ================================================== the form ======== -->
+  @if (open(); as payment) {
+    <section class="card pay__form" role="group" aria-labelledby="pay-form-title">
+      <div class="card__header">
+        <div>
+          <h2 class="card__title" id="pay-form-title">
+            Confirm {{ payment.requestNo }}
+          </h2>
+          <p class="card__subtitle">
+            {{ payment.planName }} · expected {{ money(payment.priceQuoted) }}
+          </p>
+        </div>
+
+        <ui-badge tone="warning" size="sm">{{ payment.paymentStatusCode }}</ui-badge>
+      </div>
+
+      <div class="card__body">
+        <div class="form-grid">
+          <div class="field">
+            <label class="field__label" for="pay-amount">Amount received</label>
+            <input
+              id="pay-amount"
+              type="number"
+              step="0.01"
+              min="0"
+              class="form-control"
+              [value]="amount()"
+              (input)="setAmount($any($event.target).value)"
+            />
+
+            <!--
+              🔴 THE DIFFERENCE IN WORDS, NOT A SIGNED NUMBER.
+
+              "₹100 short" and "₹100 overpaid" are the two readings that matter,
+              and a bare "-100" invites exactly the wrong one. The same
+              direction the server computes for the queue (6.5-B).
+            -->
+            <p
+              class="field__helper"
+              [class.pay__diff--on]="differs()"
+            >{{ differenceLabel() }}</p>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="pay-mode">How it arrived</label>
+            <select
+              id="pay-mode"
+              class="form-control"
+              [value]="modeId()"
+              (change)="setMode($any($event.target).value)"
+            >
+              @for (mode of modes; track mode.id) {
+                <option [value]="mode.id">{{ mode.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="pay-ref">
+              Reference <span class="field__optional">(optional)</span>
+            </label>
+            <input
+              id="pay-ref"
+              class="form-control"
+              placeholder="UTR, cheque number, receipt book number"
+              [value]="reference()"
+              (input)="reference.set($any($event.target).value)"
+            />
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="pay-date">
+              Date received <span class="field__optional">(optional)</span>
+            </label>
+            <input
+              id="pay-date"
+              type="date"
+              class="form-control"
+              [value]="paidOn()"
+              (input)="paidOn.set($any($event.target).value)"
+            />
+            <p class="field__helper">Leave empty to record it as today.</p>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="pay-remarks">
+            Remarks
+            @if (differs()) {
+              <span class="pay__req" aria-hidden="true">*</span>
+            } @else {
+              <span class="field__optional">(optional)</span>
+            }
+          </label>
+
+          <textarea
+            id="pay-remarks"
+            class="form-control"
+            rows="2"
+            [value]="remarks()"
+            [attr.aria-describedby]="remarkMissing() ? 'pay-remarks-error' : null"
+            (input)="remarks.set($any($event.target).value)"
+          ></textarea>
+
+          <!--
+            🔴 REQUIRED ONLY WHEN THE AMOUNT DIFFERS (6.5-B).
+
+            An exact payment needs no explanation, and asking for one every time
+            trains people to type "ok" — which is worse than nothing, because it
+            looks like information. When the amounts differ, the remark is where
+            a chase begins.
+
+            ⚠️ The server enforces this too and answers 400. This asks first so
+            nobody meets the refusal; it does not replace it.
+          -->
+          @if (remarkMissing()) {
+            <p class="field__error" id="pay-remarks-error" role="alert">
+              The amount differs from the plan price, so please say why.
+            </p>
+          } @else {
+            <p class="field__helper">
+              Why the amount differs, or anything worth recording about this
+              payment.
+            </p>
+          }
+        </div>
+      </div>
+
+      <div class="card__footer">
+        <div class="btn-group btn-group--end">
+          <button type="button" class="btn btn--ghost" (click)="cancel()">
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            class="btn btn--primary"
+            [disabled]="submitting() || remarkMissing()"
+            (click)="confirm()"
+          >
+            {{ submitting() ? 'Confirming …' : 'Confirm and activate' }}
+          </button>
+        </div>
+      </div>
+    </section>
+  }
+</div>

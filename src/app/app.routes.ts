@@ -129,6 +129,30 @@ export const routes: Routes = [
         data: { title: 'Plans and features' },
       },
 
+      /*
+        Phase 6.5B — the payments queue.
+
+        🔴 Gated on PAYMENT.VERIFY on the SERVER, and there is no
+        permissionGuard here for the same reason 'settings/plans' has none:
+        hiding a route is presentation. The seeded menu row carries the same
+        permission, so nobody without it sees the link — and if they type the
+        URL, every call the screen makes is refused 403. Protection is the
+        API's job.
+
+        ⚠️ A DIFFERENT SCREEN FROM /billing in the school and teacher portals,
+        not a shared one. "What plan am I on" and "everyone's payments awaiting
+        confirmation" are two jobs that happen to involve the same table;
+        sharing a component between them would be sharing a name.
+      */
+      {
+        path: 'billing/payments',
+        loadComponent: () =>
+          import('./features/billing/payments/payments-queue.component').then(
+            (m) => m.PaymentsQueueComponent,
+          ),
+        data: { title: 'Payments' },
+      },
+
       { path: 'moderation/jobs', loadComponent: comingSoon, data: { title: 'Job moderation' } },
       { path: 'moderation/reports', loadComponent: comingSoon, data: { title: 'Reports' } },
       { path: 'users', loadComponent: comingSoon, data: { title: 'Users' } },

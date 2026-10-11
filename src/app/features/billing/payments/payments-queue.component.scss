@@ -1,0 +1,47 @@
+@use 'variables' as v;
+@use 'mixins' as m;
+
+/*
+  ⚠️ The page, the table, the cards, the banners, the note, the fields and the
+  buttons are all the design system's. What is here is the three things this
+  screen owns: the money column's alignment, the difference's emphasis, and the
+  required-mark.
+
+  🔴 No `.tabs` and no `.banner` margin override — this screen IS inside
+  `.page`, which is a flex column with its own gap. G27 left five one-line
+  opt-ins behind for two screens that are NOT inside `.page`; adding one here
+  would make it six for no reason.
+*/
+
+/*
+  Money right-aligned and tabular, so a column of amounts can be scanned for
+  the odd one out. The admin here is comparing against a bank statement.
+*/
+.pay__amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pay__form {
+  /* Marked as the thing being decided, the same way the billing page does. */
+  border-color: var(--jp-primary);
+}
+
+/*
+  🔴 THE DIFFERENCE IS EMPHASISED ONLY WHEN THERE IS ONE.
+
+  "Matches the plan price" is the common case and should be quiet. A mismatch is
+  the case that needs a second look — and it is WARNING rather than danger,
+  because a short payment is a real thing that happened, not an error somebody
+  made. The words beside it carry the meaning; this only draws the eye.
+*/
+.pay__diff--on {
+  color: var(--jp-warning-text);
+  font-weight: var(--jp-font-weight-medium);
+}
+
+.pay__req {
+  color: var(--jp-danger);
+  font-weight: var(--jp-font-weight-semibold);
+}
