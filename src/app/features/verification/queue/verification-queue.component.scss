@@ -7,29 +7,14 @@
 // Underlined rather than pill-shaped. Two queues that are the same kind of
 // thing seen through different filters — pills would read as two destinations.
 // -----------------------------------------------------------------------------
-.tabs {
-  display: flex;
-  gap: v.$space-1;
-  border-bottom: 1px solid var(--jp-border);
-}
+/*
+  ⚠️ NOTHING LOCAL FOR THE TABS — G27.
 
-.tabs__tab {
-  @include m.focus-ring;
-
-  padding: v.$space-2 v.$space-4;
-  border-bottom: 2px solid transparent;
-  color: var(--jp-text-muted);
-  font-size: var(--jp-font-size-sm);
-  font-weight: var(--jp-font-weight-medium);
-  text-decoration: none;
-
-  &:hover { color: var(--jp-text); }
-
-  &--active {
-    border-bottom-color: var(--jp-primary);
-    color: var(--jp-text);
-  }
-}
+  This screen is wrapped in `.page`, which is `flex-column($space-5)`, so the
+  gap comes from above and the shared `.tabs` needs no help. That is why this
+  copy never had a `margin-bottom` while the other two did, and why the shared
+  version has none: this was the one that had it right.
+*/
 
 // The filter strip sits directly on the sheet with no gap, so the page reads
 // as one continuous document rather than a control bar with a grid underneath.
