@@ -1,0 +1,131 @@
+@use 'variables' as v;
+@use 'mixins' as m;
+
+/*
+  ⚠️ Chrome is the design system's. An enquiry is a paragraph somebody wrote,
+  so this is a list of cards rather than a table — the message is the content,
+  and a message in a table cell is either truncated or ruins the row heights.
+*/
+
+.enq__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-3;
+}
+
+.enq__item {
+  padding: v.$space-4;
+  background: var(--jp-surface);
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-lg);
+}
+
+/* An answered enquiry recedes. It is a record, not work. */
+.enq__item--done {
+  background: var(--jp-surface-sunken);
+}
+
+.enq__head {
+  @include m.flex-between(flex-start, v.$space-3);
+
+  flex-wrap: wrap;
+}
+
+.enq__subject {
+  margin: 0;
+  font-size: var(--jp-font-size-base);
+  font-weight: var(--jp-font-weight-semibold);
+}
+
+.enq__from {
+  margin: v.$space-1 0 0;
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-sm);
+}
+
+.enq__when {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: v.$space-1;
+  text-align: right;
+}
+
+/*
+  🔴 THE AGE OF THE OLDEST UNANSWERED MESSAGE IS THE HEALTH OF THIS INBOX, so
+  it is the emphasised thing. Warning, not danger: a message waiting two days
+  is normal, and the sentence says the number so a reader judges for
+  themselves.
+*/
+.enq__waiting {
+  color: var(--jp-warning-text);
+  font-weight: var(--jp-font-weight-medium);
+  font-size: var(--jp-font-size-sm);
+  white-space: nowrap;
+}
+
+.enq__answered {
+  color: var(--jp-success);
+  font-size: var(--jp-font-size-sm);
+  white-space: nowrap;
+}
+
+.enq__received {
+  color: var(--jp-text-subtle);
+  font-size: var(--jp-font-size-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.enq__message {
+  margin: v.$space-3 0 0;
+  color: var(--jp-text-muted);
+
+  /* Shown exactly as typed, newlines kept. */
+  white-space: pre-wrap;
+}
+
+.enq__resolution {
+  margin: v.$space-3 0 0;
+  padding-left: v.$space-3;
+  border-left: 2px solid var(--jp-border);
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-sm);
+}
+
+.enq__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: v.$space-2;
+  margin-top: v.$space-3;
+}
+
+.enq__panel {
+  border-color: var(--jp-primary);
+}
+
+.enq__req {
+  color: var(--jp-danger);
+  font-weight: var(--jp-font-weight-semibold);
+}
+
+.enq__req-note {
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-sm);
+}
+
+@include m.down(sm) {
+  /*
+    The date block moves under the subject and left-aligns: right-aligned text
+    on a 375px screen leaves a ragged column down the middle.
+  */
+  .enq__when {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .enq__actions .btn { flex: 1 1 auto; }
+}

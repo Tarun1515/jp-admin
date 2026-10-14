@@ -1,0 +1,88 @@
+@use 'variables' as v;
+@use 'mixins' as m;
+
+/*
+  ⚠️ Chrome is the design system's. A block is a key with a paragraph of copy
+  under it, so this is a list for the same reason the FAQ screen is one: copy
+  in a table cell truncates, and truncated copy cannot be proof-read.
+*/
+
+.blk__form {
+  border-color: var(--jp-primary);
+}
+
+.blk__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-3;
+}
+
+.blk__item {
+  padding: v.$space-4;
+  background: var(--jp-surface);
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-lg);
+}
+
+.blk__item--off {
+  background: var(--jp-surface-sunken);
+  border-style: dashed;
+}
+
+.blk__head {
+  @include m.flex-between(center, v.$space-3);
+
+  flex-wrap: wrap;
+}
+
+/*
+  🔴 THE KEY IS THE IDENTITY, so it leads — in a monospace face, because it is
+  an identifier a developer will type into a page and not a title anyone reads.
+*/
+.blk__key {
+  font-size: var(--jp-font-size-sm);
+  font-weight: var(--jp-font-weight-semibold);
+}
+
+.blk__title {
+  margin: v.$space-2 0 0;
+  font-size: var(--jp-font-size-base);
+  font-weight: var(--jp-font-weight-semibold);
+}
+
+.blk__content {
+  margin: v.$space-2 0 0;
+  color: var(--jp-text-muted);
+
+  /* Shown exactly as written, newlines included. */
+  white-space: pre-wrap;
+}
+
+.blk__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: v.$space-3;
+  margin-top: v.$space-3;
+  color: var(--jp-text-subtle);
+  font-size: var(--jp-font-size-sm);
+}
+
+.blk__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: v.$space-2;
+  margin-top: v.$space-3;
+}
+
+.blk__warn {
+  display: block;
+  color: var(--jp-warning-text);
+}
+
+@include m.down(sm) {
+  .blk__actions .btn { flex: 1 1 auto; }
+}

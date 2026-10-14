@@ -1,0 +1,232 @@
+<div class="page enter">
+  <header class="page__header">
+    <div class="page__heading">
+      <h1 class="page__title">Enquiries</h1>
+      <p class="page__description">
+        Messages from the contact form on the public site. Oldest unanswered
+        first.
+      </p>
+    </div>
+  </header>
+
+  @if (outcome(); as message) {
+    <div class="banner banner--success" role="status">
+      <div><strong>{{ message }}</strong></div>
+    </div>
+  }
+
+  <!--
+    Three real filters, as buttons rather than a select: there are exactly
+    three and the one people want is the default. A dropdown would hide the
+    common case behind a click.
+  -->
+  <div class="page__toolbar" style="--jp-enter-index: 1">
+    <div class="btn-group" role="group" aria-label="Which enquiries">
+      <button
+        type="button"
+        class="btn btn--sm"
+        [class.btn--primary]="isResolved() === false"
+        (click)="setFilter(false)"
+      >Unanswered</button>
+
+      <button
+        type="button"
+        class="btn btn--sm"
+        [class.btn--primary]="isResolved() === true"
+        (click)="setFilter(true)"
+      >Answered</button>
+
+      <button
+        type="button"
+        class="btn btn--sm"
+        [class.btn--primary]="isResolved() === null"
+        (click)="setFilter(null)"
+      >All</button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <p class="table__loading">Loading …</p>
+  } @else if (failed()) {
+    <!--
+      🔴 A FAILED READ IS NOT AN EMPTY INBOX — and this is the screen where
+      that distinction costs the most: a visitor who wrote in is waiting, and
+      "nothing here" would close the tab on them.
+    -->
+    <p class="note" role="alert">
+      The enquiries could not be loaded. Nothing has been missed — try again in
+      a moment.
+    </p>
+  } @else if (rows().length === 0) {
+    <p class="note">
+      @if (isResolved() === false) {
+        Nothing is waiting. Every enquiry has been answered.
+      } @else if (isResolved() === true) {
+        Nothing has been answered yet.
+      } @else {
+        Nobody has written in yet. Messages from the contact form appear here.
+      }
+    </p>
+  } @else {
+    <ul class="enq__list">
+      @for (row of rows(); track row.enquiryId) {
+        <li class="enq__item" [class.enq__item--done]="row.isResolved">
+          <div class="enq__head">
+            <div>
+              <h2 class="enq__subject">{{ row.subject }}</h2>
+
+              <!--
+                🔒 The name, email and number the visitor typed, so they can be
+                replied to. See the component header for why this is the one
+                admin screen that shows contact details.
+              -->
+              <p class="enq__from">
+                {{ row.name }} ·
+                <a [href]="'mailto:' + row.email">{{ row.email }}</a>
+                @if (row.mobile) { · {{ row.mobile }} }
+              </p>
+            </div>
+
+            <div class="enq__when">
+              @if (row.isResolved) {
+                <span class="enq__answered">Answered {{ moment(row.resolvedOn) }}</span>
+              } @else {
+                <!--
+                  🔴 The number that matters: days waiting, not a date. An
+                  inbox is judged by its oldest unanswered message, and
+                  "received 3 October" asks the reader to do the arithmetic.
+                -->
+                <span class="enq__waiting">
+                  @if (waitingDays(row) === 0) {
+                    Today
+                  } @else {
+                    Waiting {{ waitingDays(row) }}
+                    {{ waitingDays(row) === 1 ? 'day' : 'days' }}
+                  }
+                </span>
+              }
+              <span class="enq__received">{{ moment(row.createdOn) }}</span>
+            </div>
+          </div>
+
+          <p class="enq__message">{{ row.message }}</p>
+
+          @if (row.isResolved && row.resolutionRemarks) {
+            <!--
+              What they were told, kept with the message. 033's CHECK is what
+              makes this always present on a resolved row rather than usually.
+            -->
+            <p class="enq__resolution">
+              <strong>What we told them:</strong> {{ row.resolutionRemarks }}
+            </p>
+          }
+
+          @if (!row.isResolved) {
+            <div class="enq__actions">
+              <!--
+                ⚠️ A mailto, not a send button. Nothing in the product sends
+                mail on an admin's behalf, and a button that looked like it did
+                would misrepresent where the reply came from.
+              -->
+              <a class="btn btn--sm btn--primary" [href]="replyHref(row)">Reply by email</a>
+
+              <button type="button" class="btn btn--sm" (click)="start(row)">
+                Mark answered
+              </button>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+
+    @if (total() > pageSize) {
+      <nav class="table-pager" aria-label="Enquiry pages">
+        <span class="table-pager__summary">
+          {{ rangeStart() }}–{{ rangeEnd() }} of {{ total() }}
+        </span>
+
+        <div class="table-pager__controls">
+          <button
+            type="button"
+            class="table-pager__page"
+            [disabled]="page() === 1"
+            (click)="goToPage(page() - 1)"
+            aria-label="Previous page"
+          >‹</button>
+
+          @for (number of pageNumbers(); track number) {
+            <button
+              type="button"
+              class="table-pager__page"
+              [attr.aria-current]="number === page() ? 'page' : null"
+              (click)="goToPage(number)"
+            >{{ number }}</button>
+          }
+
+          <button
+            type="button"
+            class="table-pager__page"
+            [disabled]="page() === totalPages()"
+            (click)="goToPage(page() + 1)"
+            aria-label="Next page"
+          >›</button>
+        </div>
+      </nav>
+    }
+  }
+
+  <!-- ================================================== answering ======== -->
+  @if (open(); as enquiry) {
+    <section class="card enq__panel" role="group" aria-labelledby="enq-panel-title">
+      <div class="card__header">
+        <div>
+          <h2 class="card__title" id="enq-panel-title">Mark answered</h2>
+          <p class="card__subtitle">{{ enquiry.subject }} — {{ enquiry.name }}</p>
+        </div>
+      </div>
+
+      <div class="card__body">
+        <div class="field">
+          <div class="field__label-row">
+            <label class="field__label" for="enq-remarks">
+              What you told them <span class="enq__req" aria-hidden="true">*</span>
+            </label>
+          </div>
+
+          <textarea
+            class="form-control"
+            id="enq-remarks"
+            rows="3"
+            [ngModel]="remarks()"
+            (ngModelChange)="remarks.set($event)"
+            placeholder="Explained that school accounts are verified within two working days."
+            aria-describedby="enq-remarks-help"
+          ></textarea>
+
+          <p class="field__helper" id="enq-remarks-help">
+            Internal, and required — the next person to see this enquiry needs
+            to know what was already said. Often that person is you, in a
+            month.
+          </p>
+        </div>
+      </div>
+
+      <div class="card__footer form-actions">
+        <button type="button" class="btn btn--ghost" (click)="cancel()">Cancel</button>
+
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="submitting() || remarkMissing()"
+          (click)="confirm()"
+        >
+          @if (submitting()) { Saving … } @else { Mark it answered }
+        </button>
+
+        @if (remarkMissing()) {
+          <span class="enq__req-note">A note is required.</span>
+        }
+      </div>
+    </section>
+  }
+</div>

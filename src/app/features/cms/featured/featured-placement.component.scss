@@ -1,0 +1,68 @@
+@use 'variables' as v;
+@use 'mixins' as m;
+
+/*
+  ⚠️ Chrome is the design system's. This screen owns the three group headings,
+  the window column and the two warnings.
+*/
+
+.feat__form {
+  border-color: var(--jp-primary);
+}
+
+.feat__group {
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-3;
+}
+
+/*
+  A heading with a count beside it. The count is a badge rather than "(3)"
+  because the three groups are scanned, not read.
+*/
+.feat__group-title {
+  @include m.flex(row, flex-start, center, v.$space-2);
+
+  margin: 0;
+  font-size: var(--jp-font-size-base);
+  font-weight: var(--jp-font-weight-semibold);
+}
+
+.feat__sub {
+  display: block;
+  margin-top: v.$space-1;
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-sm);
+}
+
+/*
+  🔴 THE PLACEMENT THAT IS DOING NOTHING. Warning, not danger: nothing is
+  broken — a window is promoting something the public site does not show. The
+  sentence carries the meaning; this draws the eye to it.
+*/
+.feat__down {
+  display: block;
+  margin-top: v.$space-2;
+  color: var(--jp-warning-text);
+  font-size: var(--jp-font-size-sm);
+}
+
+.feat__warn {
+  display: block;
+  color: var(--jp-danger);
+}
+
+.feat__window {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.feat__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@include m.down(sm) {
+  /* The arrow between two dates is the first thing to lose on a phone. */
+  .feat__window { white-space: normal; }
+}

@@ -1,0 +1,271 @@
+<div class="page enter">
+  <header class="page__header">
+    <div class="page__heading">
+      <h1 class="page__title">Featured placement</h1>
+      <p class="page__description">
+        What sits at the top of the public job list, and for how long. A
+        placement is a date range — it starts and stops on its own.
+      </p>
+    </div>
+
+    <div class="page__actions">
+      <button type="button" class="btn btn--primary" (click)="openForm()">
+        Add a placement
+      </button>
+    </div>
+  </header>
+
+  @if (outcome(); as message) {
+    <div class="banner banner--success" role="status">
+      <div><strong>{{ message }}</strong></div>
+    </div>
+  }
+
+  <!-- ================================================== the form ========= -->
+  @if (formOpen()) {
+    <section class="card feat__form" role="group" aria-labelledby="feat-form-title">
+      <div class="card__header">
+        <h2 class="card__title" id="feat-form-title">Add a placement</h2>
+      </div>
+
+      <div class="card__body form-grid">
+        <div class="field">
+          <label class="field__label" for="feat-type">What</label>
+          <select
+            class="form-control"
+            id="feat-type"
+            [ngModel]="featuredType()"
+            (ngModelChange)="featuredType.set($event)"
+          >
+            <option value="JOB">An advert</option>
+            <option value="SCHOOL">A school</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="feat-uid">Its id</label>
+          <input
+            class="form-control"
+            id="feat-uid"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="2f6c1e40-…"
+            [ngModel]="entityUid()"
+            (ngModelChange)="entityUid.set($event)"
+            aria-describedby="feat-uid-help"
+          />
+
+          <!--
+            🔴 THE PUBLIC ID IS THE UID (2.47), and it is the last segment of
+            the public link — staffroom.in/jobs/maths-teacher-<uid>. Saying
+            where to find it is the difference between a usable field and one
+            that needs a database query.
+          -->
+          <p class="field__helper" id="feat-uid-help">
+            The id at the end of the public link.
+            @if (uidLooksWrong()) {
+              <strong class="feat__warn">That is not the shape of an id.</strong>
+            }
+          </p>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="feat-from">From</label>
+          <input
+            class="form-control"
+            id="feat-from"
+            type="date"
+            [ngModel]="fromDate()"
+            (ngModelChange)="fromDate.set($event)"
+          />
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="feat-to">To</label>
+          <input
+            class="form-control"
+            id="feat-to"
+            type="date"
+            [ngModel]="toDate()"
+            (ngModelChange)="toDate.set($event)"
+            aria-describedby="feat-to-help"
+          />
+
+          <p class="field__helper" id="feat-to-help">
+            Both days count — a placement from the 1st to the 1st runs for one
+            day. Dates are read in India time.
+            @if (datesWrong()) {
+              <strong class="feat__warn">The end is before the start.</strong>
+            }
+          </p>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="feat-order">Order</label>
+          <input
+            class="form-control"
+            id="feat-order"
+            type="number"
+            min="1"
+            [ngModel]="displayOrder()"
+            (ngModelChange)="displayOrder.set(+$event)"
+            aria-describedby="feat-order-help"
+          />
+          <p class="field__helper" id="feat-order-help">
+            Lower goes first among the placements live on the same day.
+          </p>
+        </div>
+      </div>
+
+      <div class="card__footer form-actions">
+        <button type="button" class="btn btn--ghost" (click)="closeForm()">Cancel</button>
+
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="cannotSave() || submitting()"
+          (click)="save()"
+        >
+          @if (submitting()) { Saving … } @else { Save the placement }
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (loading()) {
+    <p class="table__loading">Loading …</p>
+  } @else if (failed()) {
+    <p class="note" role="alert">
+      The placements could not be loaded. Nothing has changed on the public
+      site — try again in a moment.
+    </p>
+  } @else if (rows().length === 0) {
+    <p class="note">
+      Nothing is featured. The public job list is ordered newest first until
+      something is.
+    </p>
+  } @else {
+    <!--
+      🔴 THREE GROUPS, FROM ONE FIELD. Live today / starting later / finished,
+      and the server decided which by comparing dates in IST. Grouping them
+      here rather than showing one flat table is the honest presentation of a
+      date range: "featured" is not a state a row is in, it is a question about
+      today.
+    -->
+    @if (live().length > 0) {
+      <section class="feat__group">
+        <h2 class="feat__group-title">
+          Live today <ui-badge tone="success" size="sm">{{ live().length }}</ui-badge>
+        </h2>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">What</th>
+                <th scope="col">Window</th>
+                <th scope="col" class="feat__num">Order</th>
+                <th scope="col"><span class="visually-hidden">Remove</span></th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (row of live(); track row.featuredId) {
+                <tr>
+                  <td>
+                    <strong>{{ row.entityName }}</strong>
+                    <span class="feat__sub">
+                      {{ typeLabel(row.featuredType) }}@if (row.ownerName) { · {{ row.ownerName }} }
+                    </span>
+
+                    @if (entityIsDown(row)) {
+                      <!--
+                        🔴 THE CASE THAT LOOKS LIKE A BUG AND IS NOT. The
+                        placement is live; the thing it promotes is not, so the
+                        public list drops it. Said plainly, because the
+                        alternative is an admin concluding featuring is broken.
+                      -->
+                      <span class="feat__down">
+                        This {{ typeLabel(row.featuredType) | lowercase }} is
+                        {{ row.entityStatusName | lowercase }}, so it does not
+                        appear publicly — the placement is doing nothing.
+                      </span>
+                    }
+                  </td>
+
+                  <td class="feat__window">
+                    {{ day(row.fromDate) }} → {{ day(row.toDate) }}
+                  </td>
+
+                  <td class="feat__num">{{ row.displayOrder }}</td>
+
+                  <td>
+                    <button type="button" class="btn btn--sm btn--ghost" (click)="remove(row)">
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    @if (scheduled().length > 0) {
+      <section class="feat__group">
+        <h2 class="feat__group-title">
+          Starting later <ui-badge tone="info" size="sm">{{ scheduled().length }}</ui-badge>
+        </h2>
+
+        <div class="table-wrap">
+          <table class="table">
+            <tbody>
+              @for (row of scheduled(); track row.featuredId) {
+                <tr>
+                  <td>
+                    <strong>{{ row.entityName }}</strong>
+                    <span class="feat__sub">{{ typeLabel(row.featuredType) }}</span>
+                  </td>
+                  <td class="feat__window">{{ day(row.fromDate) }} → {{ day(row.toDate) }}</td>
+                  <td class="feat__num">{{ row.displayOrder }}</td>
+                  <td>
+                    <button type="button" class="btn btn--sm btn--ghost" (click)="remove(row)">
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    @if (finished().length > 0) {
+      <section class="feat__group">
+        <h2 class="feat__group-title">Finished</h2>
+
+        <!--
+          ⚠️ Kept on the screen rather than hidden. A finished placement is the
+          record of what was promoted last month, and it ended with nothing
+          running — which is the whole point of a date range. There is no
+          "unfeature" button here because there is nothing to undo.
+        -->
+        <div class="table-wrap">
+          <table class="table table--compact">
+            <tbody>
+              @for (row of finished(); track row.featuredId) {
+                <tr class="row--muted">
+                  <td>{{ row.entityName }}</td>
+                  <td class="feat__window">{{ day(row.fromDate) }} → {{ day(row.toDate) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  }
+</div>

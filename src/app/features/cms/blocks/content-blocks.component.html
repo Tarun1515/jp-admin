@@ -1,0 +1,247 @@
+<div class="page enter">
+  <header class="page__header">
+    <div class="page__heading">
+      <h1 class="page__title">Page content</h1>
+      <p class="page__description">
+        Blocks of copy the public site can ask for by key.
+        {{ liveCount() }} of {{ rows().length }} are being served.
+      </p>
+    </div>
+
+    <div class="page__actions">
+      <button type="button" class="btn btn--primary" (click)="startNew()">
+        Add a block
+      </button>
+    </div>
+  </header>
+
+  <!--
+    🔴 THE SENTENCE THIS SCREEN HAS TO SAY (G44).
+
+    The endpoint is live and anonymous, and nothing on the public site renders
+    a block yet. An editor who types a hero line, saves it and sees the site
+    unchanged would reasonably conclude the save failed — so the screen says
+    which it is, before they type.
+
+    ⚠️ It stays until a public page actually reads one. Removing this notice is
+    the last step of closing that gap, not the first.
+  -->
+  <div class="banner banner--warning" role="status">
+    <div>
+      <strong>No public page shows these yet.</strong>
+      <p>
+        The copy saves and the site serves it at
+        <code>/api/public/content-blocks</code>, but no page on
+        staffroom.in reads a block today. Anything written here is stored and
+        waiting, not published.
+      </p>
+    </div>
+  </div>
+
+  @if (outcome(); as message) {
+    <div class="banner banner--success" role="status">
+      <div><strong>{{ message }}</strong></div>
+    </div>
+  }
+
+  <!-- ================================================== the form ========= -->
+  @if (formOpen()) {
+    <section class="card blk__form" role="group" aria-labelledby="blk-form-title">
+      <div class="card__header">
+        <h2 class="card__title" id="blk-form-title">
+          {{ editing() ? 'Edit ' + editing()!.blockKey : 'A new block' }}
+        </h2>
+      </div>
+
+      <div class="card__body">
+        <div class="form-grid">
+          <div class="field">
+            <label class="field__label" for="blk-key">Key</label>
+
+            @if (editing()) {
+              <!--
+                🔴 READ-ONLY ONCE IT EXISTS. A page asks for a block by key, so
+                renaming one is not an edit: it unpublishes the old block and
+                creates a new one that nothing asks for. Making a new block
+                with the new key is the honest way to do that, and it is one
+                click away.
+              -->
+              <input class="form-control" id="blk-key" type="text" [value]="blockKey()" readonly />
+              <p class="field__helper">
+                The key cannot change — a page asks for this block by it.
+                Add a new block if you need a different key.
+              </p>
+            } @else {
+              <input
+                class="form-control"
+                id="blk-key"
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="HOME_HERO"
+                [ngModel]="blockKey()"
+                (ngModelChange)="blockKey.set($event)"
+                aria-describedby="blk-key-help"
+              />
+              <p class="field__helper" id="blk-key-help">
+                How a page will ask for it. Capitals and underscores.
+                @if (keyLooksOdd()) {
+                  <strong class="blk__warn">
+                    Every other key is UPPER_SNAKE — a mixture is two keys
+                    nobody remembers.
+                  </strong>
+                }
+              </p>
+            }
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="blk-order">Order</label>
+            <input
+              class="form-control"
+              id="blk-order"
+              type="number"
+              min="1"
+              [ngModel]="displayOrder()"
+              (ngModelChange)="displayOrder.set(+$event)"
+            />
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field__label-row">
+            <label class="field__label" for="blk-title">
+              Heading <span class="field__optional">optional</span>
+            </label>
+          </div>
+          <input
+            class="form-control"
+            id="blk-title"
+            type="text"
+            [ngModel]="blockTitle()"
+            (ngModelChange)="blockTitle.set($event)"
+          />
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="blk-content">Copy</label>
+          <textarea
+            class="form-control"
+            id="blk-content"
+            rows="6"
+            [ngModel]="blockContent()"
+            (ngModelChange)="blockContent.set($event)"
+            aria-describedby="blk-content-help"
+          ></textarea>
+          <p class="field__helper" id="blk-content-help">
+            Plain text, shown exactly as written. Line breaks are kept; no
+            formatting is interpreted.
+          </p>
+        </div>
+
+        <div class="field">
+          <div class="field__label-row">
+            <label class="field__label" for="blk-image">
+              Image path <span class="field__optional">optional</span>
+            </label>
+          </div>
+          <input
+            class="form-control"
+            id="blk-image"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            [ngModel]="imagePath()"
+            (ngModelChange)="imagePath.set($event)"
+            aria-describedby="blk-image-help"
+          />
+          <!--
+            ⚠️ A PATH, NOT AN UPLOAD. There is no upload behind this field and
+            the screen does not pretend otherwise: whatever is typed is served
+            as-is to whoever asks for the block.
+          -->
+          <p class="field__helper" id="blk-image-help">
+            A path to a file that already exists. This field does not upload
+            anything.
+          </p>
+        </div>
+
+        <label class="form-check" for="blk-active">
+          <input
+            id="blk-active"
+            type="checkbox"
+            [ngModel]="isActive()"
+            (ngModelChange)="isActive.set($event)"
+          />
+          Serve it
+        </label>
+      </div>
+
+      <div class="card__footer form-actions">
+        <button type="button" class="btn btn--ghost" (click)="closeForm()">Cancel</button>
+
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="cannotSave() || submitting()"
+          (click)="save()"
+        >
+          @if (submitting()) { Saving … } @else { Save }
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (loading()) {
+    <p class="table__loading">Loading …</p>
+  } @else if (failed()) {
+    <p class="note" role="alert">
+      The blocks could not be loaded. Nothing has changed — try again in a
+      moment.
+    </p>
+  } @else if (rows().length === 0) {
+    <p class="note">
+      There are no blocks. Add one when a page is built that asks for it.
+    </p>
+  } @else {
+    <ul class="blk__list">
+      @for (block of rows(); track block.blockId) {
+        <li class="blk__item" [class.blk__item--off]="!block.isActive">
+          <div class="blk__head">
+            <code class="blk__key">{{ block.blockKey }}</code>
+
+            @if (!block.isActive) {
+              <ui-badge tone="neutral" size="sm">Not served</ui-badge>
+            }
+          </div>
+
+          @if (block.blockTitle) {
+            <h2 class="blk__title">{{ block.blockTitle }}</h2>
+          }
+
+          <p class="blk__content">{{ block.blockContent }}</p>
+
+          <div class="blk__meta">
+            <span>Order {{ block.displayOrder }}</span>
+            @if (block.imagePath) { <span>Image: <code>{{ block.imagePath }}</code></span> }
+            <span>Edited {{ day(block.modifiedOn) }}</span>
+          </div>
+
+          <div class="blk__actions">
+            <button type="button" class="btn btn--sm" (click)="startEdit(block)">Edit</button>
+
+            <button type="button" class="btn btn--sm btn--ghost" (click)="toggleActive(block)">
+              {{ block.isActive ? 'Stop serving it' : 'Serve it' }}
+            </button>
+
+            <!--
+              ⚠️ NO DELETE. A block is addressed by key: deleting one means a
+              page asking for copy that no longer exists. Switching it off
+              stops it being served and keeps the words.
+            -->
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>

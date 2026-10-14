@@ -1,0 +1,361 @@
+<!--
+  🔴 THE CHROME IS THE DESIGN SYSTEM'S.
+
+  `.page`, `.page__header`, `.page__toolbar`, `.table-wrap`, `.table`,
+  `.table-pager`, `.row--attention`, `.row--muted`, `.card`, `.banner`,
+  `.note`, `.field` and `.btn` all come from jp-shared. This screen's own SCSS
+  holds only the three things it owns: the count columns, the log's layout, and
+  the phone reflow.
+
+  ⚠️ G27 is the gap this avoids — screens hand-rolling `.page__head`,
+  `.banner`, `.state` when four of five already existed.
+-->
+<div class="page enter">
+  <header class="page__header">
+    <div class="page__heading">
+      <h1 class="page__title">Job moderation</h1>
+      <p class="page__description">
+        Adverts people have complained about, and the ones already taken down.
+        Pulling one removes it from the public site immediately.
+      </p>
+    </div>
+  </header>
+
+  @if (outcome(); as message) {
+    <!--
+      The server's own words. "Pulled" and "restored to closed" are different
+      outcomes and the server is the one that knows which happened — a restore
+      returns a job to the status it held BEFORE the pull, which can be closed.
+    -->
+    <div class="banner banner--success" role="status">
+      <div>
+        <strong>{{ message }}</strong>
+        <p>
+          The school can see the reason on its own job. The applications are
+          untouched — nobody who applied has lost anything.
+        </p>
+      </div>
+    </div>
+  }
+
+  <div class="page__toolbar" style="--jp-enter-index: 1">
+    <div class="page__toolbar__search">
+      <label class="visually-hidden" for="mod-search">Search by job title or school</label>
+      <input
+        class="form-control"
+        id="mod-search"
+        type="search"
+        placeholder="Job title or school name"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keyup.enter)="onFilterChange()"
+        (search)="onFilterChange()"
+      />
+    </div>
+
+    <div class="page__toolbar__control">
+      <label class="visually-hidden" for="mod-status">Status</label>
+      <select
+        class="form-control"
+        id="mod-status"
+        [ngModel]="statusId()"
+        (ngModelChange)="statusId.set($event === null ? null : +$event); onFilterChange()"
+      >
+        <option [ngValue]="null">Every status</option>
+        @for (status of statuses; track status.id) {
+          <option [ngValue]="status.id">{{ status.label }}</option>
+        }
+      </select>
+    </div>
+
+    <!--
+      🔴 The triage filter. A moderator's working day is "what did people
+      complain about", not "every advert on the platform" — but the unfiltered
+      list has to exist too, for the complaint that arrives by email.
+    -->
+    <label class="page__toolbar__toggle" for="mod-reported">
+      <input
+        id="mod-reported"
+        type="checkbox"
+        [ngModel]="reportedOnly()"
+        (ngModelChange)="reportedOnly.set($event); onFilterChange()"
+      />
+      Reported only
+    </label>
+
+    @if (filtered()) {
+      <button type="button" class="btn btn--sm btn--ghost page__toolbar__clear" (click)="clearFilters()">
+        Clear
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <p class="table__loading">Loading …</p>
+  } @else if (failed()) {
+    <!--
+      🔴 A FAILED READ IS NOT AN EMPTY QUEUE. "Nothing has been reported" and
+      "we could not ask" are different statements, and showing the first when
+      the second is true is how a fake advert stays up for a week.
+    -->
+    <p class="note" role="alert">
+      The queue could not be loaded. Nothing has been missed — try again in a
+      moment.
+    </p>
+  } @else if (rows().length === 0) {
+    <p class="note">
+      @if (filtered()) {
+        No adverts match this filter.
+      } @else {
+        Nothing is waiting. Adverts people report appear here, and so do the
+        ones already pulled.
+      }
+    </p>
+  } @else {
+    <div class="table-wrap">
+      <table class="table table--hover">
+        <thead>
+          <tr>
+            <th scope="col">Advert</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="mod__num">Reports</th>
+            <th scope="col" class="mod__num">Applied</th>
+            <th scope="col">Last action</th>
+            <th scope="col"><span class="visually-hidden">Act</span></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (row of rows(); track row.jobUid) {
+            <!--
+              One colour, one meaning (the design system's rule): the rule down
+              the left says "this row needs you", which is true of a row with
+              an open complaint and of nothing else here. A pulled job is a
+              decision already taken — it recedes instead.
+            -->
+            <tr
+              [class.row--attention]="row.openReportCount > 0"
+              [class.row--muted]="isPulled(row) && row.openReportCount === 0"
+            >
+              <td>
+                <strong>{{ row.jobTitle }}</strong>
+                <span class="mod__sub">
+                  {{ row.schoolName }}@if (row.cityName) { · {{ row.cityName }} }
+                </span>
+              </td>
+
+              <td>
+                <ui-badge [tone]="tone(row)" size="sm">{{ row.statusName }}</ui-badge>
+              </td>
+
+              <td class="mod__num">
+                @if (row.openReportCount > 0) {
+                  <strong class="mod__flag">{{ row.openReportCount }}</strong>
+                } @else {
+                  —
+                }
+              </td>
+
+              <!--
+                🔴 Here so the weight of the decision is visible. These
+                applications are NOT affected by a pull — see the component's
+                header, and 025's guard.
+              -->
+              <td class="mod__num">{{ row.applicationCount }}</td>
+
+              <td>
+                @if (row.lastActionType) {
+                  {{ actionLabel(row.lastActionType) }} {{ day(row.lastActionOn) }}
+                } @else {
+                  —
+                }
+              </td>
+
+              <td>
+                @if (isPulled(row)) {
+                  <button type="button" class="btn btn--sm" (click)="start(row, 'restore')">
+                    Restore
+                  </button>
+                } @else if (canPull(row)) {
+                  <button type="button" class="btn btn--sm btn--danger" (click)="start(row, 'pull')">
+                    Pull
+                  </button>
+                }
+                <!--
+                  ⚠️ A draft gets NO button, not a disabled one (3F/3G): nobody
+                  can see a draft, so there is nothing to take down.
+                -->
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (total() > pageSize) {
+      <nav class="table-pager" aria-label="Moderation pages">
+        <span class="table-pager__summary">
+          {{ rangeStart() }}–{{ rangeEnd() }} of {{ total() }}
+        </span>
+
+        <div class="table-pager__controls">
+          <button
+            type="button"
+            class="table-pager__page"
+            [disabled]="page() === 1"
+            (click)="goToPage(page() - 1)"
+            aria-label="Previous page"
+          >‹</button>
+
+          @for (number of pageNumbers(); track number) {
+            <button
+              type="button"
+              class="table-pager__page"
+              [attr.aria-current]="number === page() ? 'page' : null"
+              (click)="goToPage(number)"
+            >{{ number }}</button>
+          }
+
+          <button
+            type="button"
+            class="table-pager__page"
+            [disabled]="page() === totalPages()"
+            (click)="goToPage(page() + 1)"
+            aria-label="Next page"
+          >›</button>
+        </div>
+      </nav>
+    }
+  }
+
+  <!-- ================================================== the panel ======== -->
+  @if (open(); as job) {
+    <section class="card mod__panel" role="group" aria-labelledby="mod-panel-title">
+      <div class="card__header">
+        <div>
+          <h2 class="card__title" id="mod-panel-title">
+            {{ intent() === 'pull' ? 'Pull' : 'Restore' }} “{{ job.jobTitle }}”
+          </h2>
+          <p class="card__subtitle">{{ job.schoolName }}</p>
+        </div>
+
+        <ui-badge [tone]="tone(job)" size="sm">{{ job.statusName }}</ui-badge>
+      </div>
+
+      <div class="card__body">
+        @if (intent() === 'pull') {
+          <p class="mod__what">
+            It disappears from the public site straight away, and the school
+            sees this reason on its own job.
+            @if (job.applicationCount > 0) {
+              <strong>
+                The {{ job.applicationCount }}
+                {{ job.applicationCount === 1 ? 'application' : 'applications' }}
+                already received stay exactly as they are.
+              </strong>
+            }
+          </p>
+        } @else {
+          <!--
+            🔴 "Back to what it was", not "back to live". The server reads the
+            status from the log, so a pulled draft returns to draft — saying
+            "republished" here would be a promise the server does not keep.
+          -->
+          <p class="mod__what">
+            It goes back to the status it held before it was pulled, which may
+            not be live — the log below says what that was.
+          </p>
+        }
+
+        <div class="field">
+          <div class="field__label-row">
+            <label class="field__label" for="mod-remarks">
+              Reason <span class="mod__req" aria-hidden="true">*</span>
+            </label>
+          </div>
+
+          <textarea
+            class="form-control"
+            id="mod-remarks"
+            rows="3"
+            [ngModel]="remarks()"
+            (ngModelChange)="remarks.set($event)"
+            placeholder="The salary range contradicts the description."
+            aria-describedby="mod-remarks-help"
+          ></textarea>
+
+          <!--
+            🔴 THE SENTENCE THAT CHANGES WHAT GETS TYPED. A moderator who
+            thinks this is an internal note writes something different from one
+            who knows the school will read it (2.62).
+          -->
+          <p class="field__helper" id="mod-remarks-help">
+            The school reads this, word for word. Write what they need to fix.
+          </p>
+        </div>
+
+        <!-- ---- the log ---------------------------------------------------- -->
+        <h3 class="mod__log-title">What has happened to this advert</h3>
+
+        @if (historyLoading()) {
+          <p class="table__loading">Loading the log …</p>
+        } @else if (history().length === 0) {
+          <p class="note">
+            Nothing yet. This would be the first moderation action on it.
+          </p>
+        } @else {
+          <!--
+            Append-only: 034 gave this table no Is_Deleted, no ModifiedOn and
+            no ModifiedBy, so nothing here can be edited or withdrawn after the
+            fact. Newest first, which is the order a moderator reads it in.
+          -->
+          <ol class="mod__log">
+            @for (entry of history(); track entry.logId) {
+              <li class="mod__log-entry">
+                <span class="mod__log-head">
+                  <strong>{{ actionLabel(entry.actionType) }}</strong>
+                  <span class="mod__log-when">{{ moment(entry.actionOn) }}</span>
+                </span>
+
+                <span class="mod__log-remarks">{{ entry.remarks }}</span>
+
+                @if (entry.previousStatusName) {
+                  <span class="mod__log-prev">
+                    Status before this: {{ entry.previousStatusName }}
+                  </span>
+                }
+              </li>
+            }
+          </ol>
+        }
+      </div>
+
+      <div class="card__footer form-actions">
+        <button type="button" class="btn btn--ghost" (click)="cancel()">Cancel</button>
+
+        <button
+          type="button"
+          [class]="intent() === 'pull' ? 'btn btn--danger' : 'btn btn--primary'"
+          [disabled]="submitting() || remarkMissing()"
+          (click)="confirm()"
+        >
+          @if (submitting()) {
+            Working …
+          } @else {
+            {{ intent() === 'pull' ? 'Pull this advert' : 'Restore it' }}
+          }
+        </button>
+
+        @if (remarkMissing()) {
+          <!--
+            ⚠️ Said, not merely enforced by a disabled button. A button that
+            does nothing with no explanation is the commonest form of a dead
+            end — and the server refuses the same thing, so this is the honest
+            version of its own rule.
+          -->
+          <span class="mod__req-note">A reason is required.</span>
+        }
+      </div>
+    </section>
+  }
+</div>

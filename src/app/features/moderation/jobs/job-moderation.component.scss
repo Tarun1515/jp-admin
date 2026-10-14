@@ -1,0 +1,129 @@
+@use 'variables' as v;
+@use 'mixins' as m;
+
+/*
+  ⚠️ The page, the toolbar, the table, the card, the banner, the fields and the
+  buttons are all the design system's. What is here is only what this screen
+  owns: the two count columns, the open-complaint emphasis, the log's layout
+  and the phone reflow.
+
+  🔴 No `.banner` margin override and no `.tabs`: this screen IS inside
+  `.page`, which is a flex column with its own gap. G27 is a list of five
+  one-line opt-ins left behind by screens that were not.
+*/
+
+/* Counts right-aligned and tabular, so a column of them can be scanned. */
+.mod__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/*
+  🔴 EMPHASISED ONLY WHEN THERE IS A COMPLAINT. Every other row shows a dash,
+  which is quieter than a 0 and means the same thing. The colour matches the
+  row's own rule, so the two read as one signal rather than two.
+*/
+.mod__flag {
+  color: var(--jp-danger);
+  font-weight: var(--jp-font-weight-semibold);
+}
+
+/* The school and city, under the title. */
+.mod__sub {
+  display: block;
+  margin-top: v.$space-1;
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-sm);
+}
+
+.mod__panel {
+  /* Marked as the thing being decided, the way the payments form is. */
+  border-color: var(--jp-primary);
+}
+
+/* What the action will do, before the field that does it. */
+.mod__what {
+  margin: 0 0 v.$space-4;
+  color: var(--jp-text-muted);
+}
+
+.mod__req {
+  color: var(--jp-danger);
+  font-weight: var(--jp-font-weight-semibold);
+}
+
+.mod__req-note {
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-sm);
+}
+
+.mod__log-title {
+  margin: v.$space-5 0 v.$space-3;
+  font-size: var(--jp-font-size-sm);
+  font-weight: var(--jp-font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--jp-text-muted);
+}
+
+/*
+  The log. A list, not a table: each entry is one action with a sentence
+  attached, and a sentence in a table cell either wraps badly or gets
+  truncated — and truncating the reason a school was given is the one thing
+  this panel must not do.
+*/
+.mod__log {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-3;
+}
+
+.mod__log-entry {
+  padding-left: v.$space-3;
+  border-left: 2px solid var(--jp-border);
+}
+
+.mod__log-head {
+  @include m.flex-between(baseline, v.$space-2);
+
+  flex-wrap: wrap;
+}
+
+.mod__log-when {
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.mod__log-remarks {
+  display: block;
+  margin-top: v.$space-1;
+  color: var(--jp-text-muted);
+}
+
+.mod__log-prev {
+  display: block;
+  margin-top: v.$space-1;
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-sm);
+}
+
+/*
+  ----------------------------------------------------------------------------
+  PHONE
+  ----------------------------------------------------------------------------
+  ⚠️ The table keeps its horizontal scroll (`.table-wrap` provides it) rather
+  than reflowing into cards. A moderator on a phone is checking one advert they
+  were told about, not scanning fifty — and a six-column table turned into
+  cards loses the one thing that makes the queue readable, which is that the
+  complaint counts line up.
+*/
+@include m.down(sm) {
+  .mod__log-head { gap: 0; }
+
+  .mod__log-when { width: 100%; }
+}

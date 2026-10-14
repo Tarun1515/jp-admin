@@ -1,0 +1,291 @@
+<!--
+  The chrome is jp-shared's: `.page`, `.page__toolbar`, `.table`,
+  `.table-pager`, `.row--attention`, `.card`, `.banner`, `.note`, `.field`,
+  `.btn`. This screen's SCSS holds only the reporter column and the complaint's
+  own layout.
+-->
+<div class="page enter">
+  <header class="page__header">
+    <div class="page__heading">
+      <h1 class="page__title">Reports</h1>
+      <p class="page__description">
+        What people have reported, newest unanswered first. Taking an advert
+        down is a separate act — do it on
+        <a routerLink="/moderation/jobs">job moderation</a>.
+      </p>
+    </div>
+  </header>
+
+  @if (outcome(); as message) {
+    <div class="banner banner--success" role="status">
+      <div>
+        <strong>{{ message }}</strong>
+        <p>
+          The person who reported it is not told what was decided, and the
+          party reported is never told who reported them.
+        </p>
+      </div>
+    </div>
+  }
+
+  <div class="page__toolbar" style="--jp-enter-index: 1">
+    <div class="page__toolbar__control">
+      <label class="visually-hidden" for="rep-status">Status</label>
+      <select
+        class="form-control"
+        id="rep-status"
+        [ngModel]="statusId()"
+        (ngModelChange)="statusId.set($event === null ? null : +$event); onFilterChange()"
+      >
+        <option [ngValue]="null">Every status</option>
+        @for (status of statuses; track status.id) {
+          <option [ngValue]="status.id">{{ status.label }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="page__toolbar__control">
+      <label class="visually-hidden" for="rep-type">What was reported</label>
+      <select
+        class="form-control"
+        id="rep-type"
+        [ngModel]="entityType()"
+        (ngModelChange)="entityType.set($event); onFilterChange()"
+      >
+        <option [ngValue]="null">Everything</option>
+        @for (type of entityTypes; track type.code) {
+          <option [ngValue]="type.code">{{ type.label }}</option>
+        }
+      </select>
+    </div>
+
+    @if (filtered()) {
+      <button type="button" class="btn btn--sm btn--ghost page__toolbar__clear" (click)="clearFilters()">
+        Clear
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <p class="table__loading">Loading …</p>
+  } @else if (failed()) {
+    <p class="note" role="alert">
+      The reports queue could not be loaded. Nothing has been missed — try
+      again in a moment.
+    </p>
+  } @else if (rows().length === 0) {
+    <p class="note">
+      @if (filtered()) {
+        No reports match this filter.
+      } @else {
+        Nothing has been reported. When a teacher or a school reports an
+        advert, a profile or a school, it appears here.
+      }
+    </p>
+  } @else {
+    <div class="table-wrap">
+      <table class="table table--hover">
+        <thead>
+          <tr>
+            <th scope="col">What</th>
+            <th scope="col">Why</th>
+            <th scope="col">Reporter</th>
+            <th scope="col">Status</th>
+            <th scope="col">Reported</th>
+            <th scope="col"><span class="visually-hidden">Act</span></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (row of rows(); track row.reportUid) {
+            <tr [class.row--attention]="row.statusCode === 'OPEN'">
+              <td>
+                <strong>{{ row.entityName ?? 'No longer there' }}</strong>
+                <span class="rep__sub">{{ entityLabel(row.reportedEntityType) }}</span>
+              </td>
+
+              <td>
+                {{ row.reasonName }}
+                @if (row.description) {
+                  <!--
+                    The reporter's own words, in full. Truncating a complaint is
+                    how a real one gets dismissed as vague.
+                  -->
+                  <span class="rep__words">“{{ row.description }}”</span>
+                }
+              </td>
+
+              <!--
+                🔒 A uid fragment and a count — never a name. The question is
+                "is one account reporting everything?", and that is what a
+                count answers. See the component header.
+              -->
+              <td class="rep__reporter">
+                <code>{{ reporterTag(row) }}</code>
+                @if (row.reportsByThisAccount > 1) {
+                  <span class="rep__pattern">
+                    {{ row.reportsByThisAccount }} reports from this account
+                  </span>
+                }
+              </td>
+
+              <td>
+                <ui-badge [tone]="tone(row)" size="sm">{{ row.statusName }}</ui-badge>
+              </td>
+
+              <td class="rep__when">{{ moment(row.createdOn) }}</td>
+
+              <td>
+                @if (isOpen(row)) {
+                  <button type="button" class="btn btn--sm btn--primary" (click)="start(row)">
+                    Decide
+                  </button>
+                } @else {
+                  <!--
+                    A terminal report keeps its button, as "Reopen" is NOT
+                    offered: 034 made 3 and 4 terminal and the server refuses to
+                    move out of them. A button that the server would refuse is
+                    worse than no button.
+                  -->
+                  <span class="rep__closed">{{ moment(row.reviewedOn) }}</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (total() > pageSize) {
+      <nav class="table-pager" aria-label="Report pages">
+        <span class="table-pager__summary">
+          {{ rangeStart() }}–{{ rangeEnd() }} of {{ total() }}
+        </span>
+
+        <div class="table-pager__controls">
+          <button
+            type="button"
+            class="table-pager__page"
+            [disabled]="page() === 1"
+            (click)="goToPage(page() - 1)"
+            aria-label="Previous page"
+          >‹</button>
+
+          @for (number of pageNumbers(); track number) {
+            <button
+              type="button"
+              class="table-pager__page"
+              [attr.aria-current]="number === page() ? 'page' : null"
+              (click)="goToPage(number)"
+            >{{ number }}</button>
+          }
+
+          <button
+            type="button"
+            class="table-pager__page"
+            [disabled]="page() === totalPages()"
+            (click)="goToPage(page() + 1)"
+            aria-label="Next page"
+          >›</button>
+        </div>
+      </nav>
+    }
+  }
+
+  <!-- ================================================== deciding ========= -->
+  @if (open(); as report) {
+    <section class="card rep__panel" role="group" aria-labelledby="rep-panel-title">
+      <div class="card__header">
+        <div>
+          <h2 class="card__title" id="rep-panel-title">
+            {{ report.reasonName }}
+          </h2>
+          <p class="card__subtitle">
+            {{ entityLabel(report.reportedEntityType) }}:
+            {{ report.entityName ?? 'no longer there' }}
+          </p>
+        </div>
+
+        <ui-badge [tone]="tone(report)" size="sm">{{ report.statusName }}</ui-badge>
+      </div>
+
+      <div class="card__body">
+        @if (report.description) {
+          <blockquote class="rep__quote">{{ report.description }}</blockquote>
+        }
+
+        <div class="field">
+          <label class="field__label" for="rep-next">What now</label>
+          <select
+            class="form-control"
+            id="rep-next"
+            [ngModel]="nextStatusId()"
+            (ngModelChange)="nextStatusId.set(+$event)"
+          >
+            <option [ngValue]="2">Under review — I am looking at it</option>
+            <option [ngValue]="3">Action taken — it was a real problem</option>
+            <option [ngValue]="4">Dismissed — nothing to do</option>
+          </select>
+
+          <p class="field__helper">
+            “Action taken” and “Dismissed” are final; the server does not move a
+            report out of either.
+          </p>
+        </div>
+
+        <div class="field">
+          <div class="field__label-row">
+            <label class="field__label" for="rep-remarks">
+              Note
+              @if (closing()) {
+                <span class="rep__req" aria-hidden="true">*</span>
+              } @else {
+                <span class="field__optional">optional</span>
+              }
+            </label>
+          </div>
+
+          <textarea
+            class="form-control"
+            id="rep-remarks"
+            rows="3"
+            [ngModel]="adminRemarks()"
+            (ngModelChange)="adminRemarks.set($event)"
+            aria-describedby="rep-remarks-help"
+          ></textarea>
+
+          <!--
+            🔒 THE ONE THING THIS NOTE IS NOT: a message to either party. It is
+            the internal record of why the decision went the way it did. What a
+            school is told lives on the job, in the moderation remarks, and
+            names nothing about the complaint.
+          -->
+          <p class="field__helper" id="rep-remarks-help">
+            Internal. Neither the reporter nor the party reported sees this.
+            @if (closing()) {
+              Required when closing a report — somebody will read this decision
+              back in six months.
+            }
+          </p>
+        </div>
+      </div>
+
+      <div class="card__footer form-actions">
+        <button type="button" class="btn btn--ghost" (click)="cancel()">Cancel</button>
+
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="submitting() || remarkMissing()"
+          (click)="confirm()"
+        >
+          @if (submitting()) { Saving … } @else { Save }
+        </button>
+
+        @if (remarkMissing()) {
+          <span class="rep__req-note">A note is required to close a report.</span>
+        }
+      </div>
+    </section>
+  }
+</div>

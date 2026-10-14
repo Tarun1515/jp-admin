@@ -153,11 +153,78 @@ export const routes: Routes = [
         data: { title: 'Payments' },
       },
 
-      { path: 'moderation/jobs', loadComponent: comingSoon, data: { title: 'Job moderation' } },
-      { path: 'moderation/reports', loadComponent: comingSoon, data: { title: 'Reports' } },
+      /*
+        Phase 7B — THE ADMIN OPERATIONS DESK, six screens over five surfaces.
+
+        🔒 Gated on the SERVER, the same way 'settings/plans' and
+        'billing/payments' are, and for the same stated reason: hiding a route
+        is presentation. MODERATION.JOB, MODERATION.REPORT, CMS.MANAGE and
+        ENQUIRY.MANAGE are checked in AdminDeskService on every call, and the
+        seeded menu rows carry the same four codes — so a person without one
+        never sees the link, and typing the URL yields a screen whose every
+        request is refused 403.
+
+        ⚠️ SIX ROUTES, NOT TABS. The CMS screens could have been one page with
+        three tabs; tabs held in a signal break the back button, cannot be
+        bookmarked and cannot be linked to from an email. 005_seed_menus.sql
+        carries a row per path, added in this same commit.
+      */
+      {
+        path: 'moderation/jobs',
+        loadComponent: () =>
+          import('./features/moderation/jobs/job-moderation.component').then(
+            (m) => m.JobModerationComponent,
+          ),
+        data: { title: 'Job moderation' },
+      },
+      {
+        path: 'moderation/reports',
+        loadComponent: () =>
+          import('./features/moderation/reports/report-queue.component').then(
+            (m) => m.ReportQueueComponent,
+          ),
+        data: { title: 'Reports' },
+      },
+      {
+        path: 'enquiries',
+        loadComponent: () =>
+          import('./features/enquiries/enquiry-queue.component').then(
+            (m) => m.EnquiryQueueComponent,
+          ),
+        data: { title: 'Enquiries' },
+      },
+      {
+        path: 'cms/featured',
+        loadComponent: () =>
+          import('./features/cms/featured/featured-placement.component').then(
+            (m) => m.FeaturedPlacementComponent,
+          ),
+        data: { title: 'Featured placement' },
+      },
+      {
+        path: 'cms/faqs',
+        loadComponent: () =>
+          import('./features/cms/faqs/faq-admin.component').then((m) => m.FaqAdminComponent),
+        data: { title: 'FAQs' },
+      },
+      {
+        path: 'cms/blocks',
+        loadComponent: () =>
+          import('./features/cms/blocks/content-blocks.component').then(
+            (m) => m.ContentBlocksComponent,
+          ),
+        data: { title: 'Page content' },
+      },
+
+      /*
+        ⚠️ /cms WAS a real route (the coming-soon placeholder) and its menu row
+        pointed at it, so it stays — as a redirect. Deleting it would 404 every
+        bookmark and every link in a handover document written before today.
+      */
+      { path: 'cms', pathMatch: 'full', redirectTo: 'cms/featured' },
+
       { path: 'users', loadComponent: comingSoon, data: { title: 'Users' } },
       { path: 'masters', loadComponent: comingSoon, data: { title: 'Master data' } },
-      { path: 'cms', loadComponent: comingSoon, data: { title: 'CMS' } },
       { path: 'reports', loadComponent: comingSoon, data: { title: 'Analytics' } },
       { path: 'settings', loadComponent: comingSoon, data: { title: 'Settings' } },
     ],

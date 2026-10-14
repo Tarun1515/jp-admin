@@ -1,0 +1,201 @@
+<div class="page enter">
+  <header class="page__header">
+    <div class="page__heading">
+      <h1 class="page__title">FAQs</h1>
+      <p class="page__description">
+        The questions on the public site, grouped the way visitors see them.
+        {{ liveCount() }} of {{ rows().length }} are live.
+      </p>
+    </div>
+
+    <div class="page__actions">
+      <button type="button" class="btn btn--primary" (click)="startNew()">
+        Add a question
+      </button>
+    </div>
+  </header>
+
+  @if (outcome(); as message) {
+    <div class="banner banner--success" role="status">
+      <div><strong>{{ message }}</strong></div>
+    </div>
+  }
+
+  <!-- ================================================== the form ========= -->
+  @if (formOpen()) {
+    <section class="card faq__form" role="group" aria-labelledby="faq-form-title">
+      <div class="card__header">
+        <h2 class="card__title" id="faq-form-title">
+          {{ editing() ? 'Edit this question' : 'A new question' }}
+        </h2>
+      </div>
+
+      <div class="card__body">
+        <div class="form-grid">
+          <div class="field">
+            <label class="field__label" for="faq-category">Group</label>
+
+            <!--
+              ⚠️ A datalist, not a select: the existing groups are offered so
+              nobody invents 'Teachers' beside 'TEACHER' and splits the public
+              page in two — but a new group is still possible without a
+              migration.
+            -->
+            <input
+              class="form-control"
+              id="faq-category"
+              list="faq-categories"
+              [ngModel]="category()"
+              (ngModelChange)="category.set($event)"
+            />
+
+            <datalist id="faq-categories">
+              @for (code of categories(); track code) {
+                <option [value]="code">{{ categoryLabel(code) }}</option>
+              }
+            </datalist>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="faq-order">Order</label>
+            <input
+              class="form-control"
+              id="faq-order"
+              type="number"
+              min="1"
+              [ngModel]="displayOrder()"
+              (ngModelChange)="displayOrder.set(+$event)"
+            />
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="faq-question">Question</label>
+          <input
+            class="form-control"
+            id="faq-question"
+            type="text"
+            [ngModel]="question()"
+            (ngModelChange)="question.set($event)"
+          />
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="faq-answer">Answer</label>
+          <textarea
+            class="form-control"
+            id="faq-answer"
+            rows="4"
+            [ngModel]="answer()"
+            (ngModelChange)="answer.set($event)"
+            aria-describedby="faq-answer-help"
+          ></textarea>
+          <p class="field__helper" id="faq-answer-help">
+            Plain text. It is shown exactly as written — no formatting is
+            interpreted, so a stray tag would appear as a stray tag.
+          </p>
+        </div>
+
+        <label class="form-check" for="faq-active">
+          <input
+            id="faq-active"
+            type="checkbox"
+            [ngModel]="isActive()"
+            (ngModelChange)="isActive.set($event)"
+          />
+          Show it on the public site
+        </label>
+      </div>
+
+      <div class="card__footer form-actions">
+        <button type="button" class="btn btn--ghost" (click)="closeForm()">Cancel</button>
+
+        <button
+          type="button"
+          class="btn btn--primary"
+          [disabled]="cannotSave() || submitting()"
+          (click)="save()"
+        >
+          @if (submitting()) { Saving … } @else { Save }
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (loading()) {
+    <p class="table__loading">Loading …</p>
+  } @else if (failed()) {
+    <p class="note" role="alert">
+      The questions could not be loaded. Nothing has changed on the public site
+      — try again in a moment.
+    </p>
+  } @else if (rows().length === 0) {
+    <p class="note">
+      There are no questions yet. The public FAQ page is empty until one is
+      added.
+    </p>
+  } @else {
+    @for (group of grouped(); track group.category) {
+      <section class="faq__group">
+        <h2 class="faq__group-title">{{ categoryLabel(group.category) }}</h2>
+
+        <ol class="faq__list">
+          @for (faq of group.faqs; track faq.faqId) {
+            <li class="faq__item" [class.faq__item--off]="!faq.isActive">
+              <div class="faq__head">
+                <h3 class="faq__question">{{ faq.question }}</h3>
+
+                @if (!faq.isActive) {
+                  <!--
+                    🔴 SAID, NOT IMPLIED BY GREYING. A FAQ that is off looks
+                    identical to one that is on if the only difference is
+                    opacity — and "why is this not on the site?" is then
+                    unanswerable from this screen.
+                  -->
+                  <ui-badge tone="neutral" size="sm">Not shown</ui-badge>
+                }
+              </div>
+
+              <p class="faq__answer">{{ faq.answer }}</p>
+
+              <div class="faq__meta">
+                <span>Order {{ faq.displayOrder }}</span>
+                <span>Edited {{ day(faq.modifiedOn) }}</span>
+              </div>
+
+              <div class="faq__actions">
+                <button type="button" class="btn btn--sm" (click)="startEdit(faq)">Edit</button>
+
+                <button type="button" class="btn btn--sm btn--ghost" (click)="toggleActive(faq)">
+                  {{ faq.isActive ? 'Switch off' : 'Switch on' }}
+                </button>
+
+                @if (confirmingDelete() === faq.faqId) {
+                  <!--
+                    ⚠️ The second click, in place. No browser dialog: it cannot
+                    be styled, cannot take the design system's focus handling,
+                    and does not appear at all in some embedded views — which
+                    would turn a confirmed delete into a silent one.
+                  -->
+                  <span class="faq__confirm">
+                    Delete it?
+                    <button type="button" class="btn btn--sm btn--danger" (click)="confirmDelete(faq)">
+                      Yes, delete
+                    </button>
+                    <button type="button" class="btn btn--sm btn--ghost" (click)="cancelDelete()">
+                      Keep it
+                    </button>
+                  </span>
+                } @else {
+                  <button type="button" class="btn btn--sm btn--link" (click)="askDelete(faq)">
+                    Delete
+                  </button>
+                }
+              </div>
+            </li>
+          }
+        </ol>
+      </section>
+    }
+  }
+</div>

@@ -1,0 +1,102 @@
+@use 'variables' as v;
+@use 'mixins' as m;
+
+/*
+  ⚠️ Chrome is the design system's. A FAQ is a question with a paragraph under
+  it, so this screen is a list rather than a table — a table cell holding four
+  sentences either wraps badly or truncates, and a truncated answer is the one
+  thing an editor cannot check.
+*/
+
+.faq__form {
+  border-color: var(--jp-primary);
+}
+
+.faq__group {
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-3;
+}
+
+.faq__group-title {
+  margin: 0;
+  font-size: var(--jp-font-size-base);
+  font-weight: var(--jp-font-weight-semibold);
+}
+
+.faq__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-3;
+}
+
+.faq__item {
+  padding: v.$space-4;
+  background: var(--jp-surface);
+  border: 1px solid var(--jp-border);
+  border-radius: var(--jp-radius-lg);
+}
+
+/*
+  🔴 OFF IS SHOWN, NOT GREYED OUT. The badge says "Not shown"; this only
+  recedes the card so the live ones read first. Opacity alone would leave
+  "why is this not on the site?" unanswerable from this screen.
+*/
+.faq__item--off {
+  background: var(--jp-surface-sunken);
+  border-style: dashed;
+}
+
+.faq__head {
+  @include m.flex-between(baseline, v.$space-3);
+
+  flex-wrap: wrap;
+}
+
+.faq__question {
+  margin: 0;
+  font-size: var(--jp-font-size-base);
+  font-weight: var(--jp-font-weight-semibold);
+}
+
+.faq__answer {
+  margin: v.$space-2 0 0;
+  color: var(--jp-text-muted);
+
+  /* The answer is shown exactly as written, newlines included. */
+  white-space: pre-wrap;
+}
+
+.faq__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: v.$space-3;
+  margin-top: v.$space-3;
+  color: var(--jp-text-subtle);
+  font-size: var(--jp-font-size-sm);
+}
+
+.faq__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: v.$space-2;
+  margin-top: v.$space-3;
+}
+
+.faq__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: v.$space-2;
+  color: var(--jp-danger);
+  font-size: var(--jp-font-size-sm);
+}
+
+@include m.down(sm) {
+  /* Buttons on their own line, full width, so none of them is a 20px target. */
+  .faq__actions .btn { flex: 1 1 auto; }
+}
