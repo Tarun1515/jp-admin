@@ -1,0 +1,257 @@
+<!--
+  Chrome is jp-shared's: `.page`, `.card`, `.card-grid`, `.table`, `.note`,
+  `.banner`, `.badge`. This screen's SCSS holds the stat tiles, the funnel bars
+  and the phone reflow.
+-->
+<div class="page enter">
+  <header class="page__header">
+    <div class="page__heading">
+      <h1 class="page__title">Analytics</h1>
+      <p class="page__description">
+        What is on the platform and what is waiting. Counted from the rows
+        themselves, as of {{ asOf() }} (India time).
+      </p>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <p class="table__loading">Loading …</p>
+  } @else if (failed()) {
+    <!--
+      🔴 A FAILED READ IS NOT A PLATFORM WITH NO NUMBERS IN IT. Showing zeroes
+      here would be the most alarming possible lie: "no schools, no teachers".
+    -->
+    <p class="note" role="alert">
+      The analytics could not be loaded. This says nothing about the platform —
+      try again in a moment.
+    </p>
+  } @else if (data(); as d) {
+    <!-- =============================================== what is waiting === -->
+    <!--
+      🔴 THE QUEUES COME FIRST, BEFORE THE TOTALS. Totals are interesting;
+      a request that has waited three weeks is work. A dashboard that leads
+      with "28 accounts" buries the only part somebody can act on today.
+    -->
+    @if (openQueues().length > 0) {
+      <section class="card an__queues" [class.an__queues--late]="worstWait() >= WAITING_TOO_LONG_DAYS">
+        <div class="card__header">
+          <div>
+            <h2 class="card__title">Waiting for a decision</h2>
+            <p class="card__subtitle">
+              Oldest first — a queue is judged by its worst case, not its average.
+            </p>
+          </div>
+
+          <ui-badge [tone]="waitTone(worstWait())" size="sm">
+            oldest {{ worstWait() }} {{ worstWait() === 1 ? 'day' : 'days' }}
+          </ui-badge>
+        </div>
+
+        <div class="card__body">
+          <div class="table-wrap">
+            <table class="table table--compact">
+              <thead>
+                <tr>
+                  <th scope="col">Queue</th>
+                  <th scope="col" class="an__num">Open</th>
+                  <th scope="col" class="an__num">Oldest wait</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (q of openQueues(); track q.requestTypeId) {
+                  <tr [class.row--attention]="q.oldestWaitingDays >= WAITING_TOO_LONG_DAYS">
+                    <td>{{ q.requestTypeName }}</td>
+                    <td class="an__num">{{ q.stillOpen }}</td>
+                    <td class="an__num">
+                      <strong [class.an__late]="q.oldestWaitingDays >= WAITING_TOO_LONG_DAYS">
+                        {{ q.oldestWaitingDays }}
+                      </strong>
+                      {{ q.oldestWaitingDays === 1 ? 'day' : 'days' }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          @if (worstWait() >= WAITING_TOO_LONG_DAYS) {
+            <!--
+              ⚠️ The threshold is a GUESS and the screen says so. A week is not
+              an SLA anybody agreed; it is a number this phase chose so the row
+              could be marked at all, and naming it is how it gets argued with.
+            -->
+            <p class="note">
+              Marked at {{ WAITING_TOO_LONG_DAYS }} days. That threshold is this
+              screen's own choice, not an agreed service level.
+            </p>
+          }
+        </div>
+      </section>
+    } @else {
+      <p class="note">Nothing is waiting for a decision.</p>
+    }
+
+    <!-- ================================================= the platform ==== -->
+    <div class="card-grid an__tiles">
+      <div class="card an__tile">
+        <span class="an__tile-value">{{ d.appTotals.schools }}</span>
+        <span class="an__tile-label">Schools</span>
+        <span class="an__tile-note">{{ d.appTotals.schoolsVerified }} verified</span>
+      </div>
+
+      <div class="card an__tile">
+        <span class="an__tile-value">{{ d.appTotals.teachers }}</span>
+        <span class="an__tile-label">Teachers</span>
+        <span class="an__tile-note">{{ d.appTotals.campuses }} campuses</span>
+      </div>
+
+      <div class="card an__tile">
+        <span class="an__tile-value">{{ d.identity.accounts }}</span>
+        <span class="an__tile-label">Accounts</span>
+        <span class="an__tile-note">{{ d.identity.accountsLast30Days }} in 30 days</span>
+      </div>
+
+      <div class="card an__tile">
+        <span class="an__tile-value">{{ jobsLive() }}</span>
+        <span class="an__tile-label">Live adverts</span>
+        <!--
+          ⚠️ "Live" is the EFFECTIVE status (2.65) — an expired advert is not
+          counted here even though no row stores "expired". This number agrees
+          with the public site by construction.
+        -->
+        <span class="an__tile-note">effective status, as the site shows it</span>
+      </div>
+
+      <div class="card an__tile" [class.an__tile--attention]="d.appTotals.openEnquiries > 0">
+        <span class="an__tile-value">{{ d.appTotals.openEnquiries }}</span>
+        <span class="an__tile-label">Unanswered enquiries</span>
+        <span class="an__tile-note">{{ d.appTotals.openReports }} open reports</span>
+      </div>
+
+      <div class="card an__tile" [class.an__tile--attention]="d.approvalTotals.paymentsAwaiting > 0">
+        <span class="an__tile-value">{{ d.approvalTotals.paymentsAwaiting }}</span>
+        <span class="an__tile-label">Payments to confirm</span>
+        <span class="an__tile-note">money already sent, not yet recorded</span>
+      </div>
+    </div>
+
+    <!-- ================================================== the funnel ===== -->
+    <section class="card">
+      <div class="card__header">
+        <div>
+          <h2 class="card__title">Applications, by stage</h2>
+          <p class="card__subtitle">
+            {{ funnelTotal() }} in total. Every stage is shown, including the
+            empty ones — a funnel with a rung missing reads as a different shape.
+          </p>
+        </div>
+      </div>
+
+      <div class="card__body">
+        @if (funnelTotal() === 0) {
+          <p class="note">
+            No applications yet. The stages below are the ones an application
+            moves through.
+          </p>
+        }
+
+        <ul class="an__funnel">
+          @for (stage of funnel(); track stage.statusId) {
+            <li class="an__stage">
+              <span class="an__stage-name">{{ stage.statusName }}</span>
+
+              <span class="an__bar" [attr.aria-hidden]="true">
+                <span class="an__bar-fill" [style.width.%]="share(stage.total)"></span>
+              </span>
+
+              <span class="an__stage-value">
+                {{ stage.total }}
+                @if (stage.last30Days > 0) {
+                  <span class="an__stage-recent">+{{ stage.last30Days }} in 30d</span>
+                }
+              </span>
+            </li>
+          }
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================================ accounts and queues == -->
+    <div class="an__columns">
+      <section class="card">
+        <div class="card__header">
+          <h2 class="card__title">Accounts by type</h2>
+        </div>
+
+        <div class="card__body">
+          @for (group of byType(); track group.name) {
+            <div class="an__group">
+              <h3 class="an__group-title">
+                {{ group.name }}
+                <span class="an__group-total">{{ group.total }}</span>
+              </h3>
+
+              @if (group.rows.length === 0) {
+                <p class="an__group-empty">none</p>
+              } @else {
+                <ul class="an__chips">
+                  @for (row of group.rows; track row.statusId) {
+                    <li class="an__chip">
+                      {{ row.statusName }} <strong>{{ row.total }}</strong>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+
+          <p class="an__meta">
+            {{ d.identity.emailVerified }} verified by email ·
+            {{ d.identity.withFailedAttempts }} carrying failed sign-ins ·
+            {{ d.identity.lockedOut }} locked out right now
+          </p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card__header">
+          <h2 class="card__title">Approvals by type</h2>
+        </div>
+
+        <div class="card__body">
+          @if (byRequestType().length === 0) {
+            <p class="note">No approval requests have been raised.</p>
+          }
+
+          @for (group of byRequestType(); track group.name) {
+            <div class="an__group">
+              <h3 class="an__group-title">
+                {{ group.name }}
+                <span class="an__group-total">{{ group.total }}</span>
+              </h3>
+
+              <ul class="an__chips">
+                @for (row of group.rows; track row.statusId) {
+                  <li class="an__chip">
+                    {{ row.statusName }} <strong>{{ row.total }}</strong>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+
+          <!--
+            🔴 THE ERROR LOG IS ON AN ANALYTICS SCREEN ON PURPOSE. G31 closed
+            because an ordinary concurrency race wrote a row every time, and the
+            damage was that the log filled with non-errors until nobody would
+            read it. A visible count is what makes that kind of drift noticeable.
+          -->
+          <p class="an__meta">
+            {{ d.approvalTotals.submittedLast30Days }} submitted in 30 days ·
+            error log holds {{ d.approvalTotals.errorLogRows }} rows
+          </p>
+        </div>
+      </section>
+    </div>
+  }
+</div>

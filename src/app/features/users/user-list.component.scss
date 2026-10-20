@@ -1,0 +1,105 @@
+@use 'variables' as v;
+@use 'mixins' as m;
+
+/*
+  ⚠️ Chrome is the design system's. This screen owns the failed-attempt column,
+  the two verification flags, and the phone reflow of its action cell.
+*/
+
+.usr__sub {
+  display: block;
+  margin-top: v.$space-1;
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-sm);
+}
+
+.usr__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/*
+  🔴 EMPHASISED ONLY WHEN THERE ARE FAILURES, and warning rather than danger:
+  three failed sign-ins is somebody mistyping, not an attack. The number is
+  what a support call starts from.
+*/
+.usr__flag {
+  color: var(--jp-warning-text);
+  font-weight: var(--jp-font-weight-semibold);
+}
+
+/*
+  Two flags, stacked. Both words are always present — "no mobile" says more
+  than a missing tick, and a support call is usually about exactly which of the
+  two is unverified.
+*/
+.usr__verified {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--jp-font-size-sm);
+  color: var(--jp-text-subtle);
+  white-space: nowrap;
+}
+
+.usr__yes {
+  color: var(--jp-success);
+}
+
+.usr__when {
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Several actions can apply at once; they wrap rather than widening the table. */
+.usr__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: v.$space-2;
+}
+
+.usr__panel {
+  border-color: var(--jp-primary);
+}
+
+.usr__what {
+  margin: 0 0 v.$space-4;
+  color: var(--jp-text-muted);
+}
+
+.usr__req {
+  color: var(--jp-danger);
+  font-weight: var(--jp-font-weight-semibold);
+}
+
+.usr__req-note {
+  color: var(--jp-text-muted);
+  font-size: var(--jp-font-size-sm);
+}
+
+@include m.down(sm) {
+  /*
+    ⚠️ The table keeps its horizontal scroll rather than reflowing into cards.
+    An administrator on a phone is looking up one account somebody just rang
+    about; the columns that matter are the status and the failed count, and
+    both stay readable.
+  */
+  .usr__actions .btn { flex: 1 1 auto; }
+}
+
+/*
+  🔴 "you" on the signed-in administrator's own row. The suspend action is
+  absent there because nothing on the server prevents self-suspension (G46),
+  and a row with no actions and no explanation reads as a rendering bug.
+*/
+.usr__me {
+  align-self: center;
+  padding: 2px v.$space-2;
+  background: var(--jp-surface-sunken);
+  border-radius: var(--jp-radius-sm, 0.25rem);
+  color: var(--jp-text-subtle);
+  font-size: var(--jp-font-size-sm);
+}

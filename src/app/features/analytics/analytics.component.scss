@@ -1,0 +1,193 @@
+@use 'variables' as v;
+@use 'mixins' as m;
+
+/*
+  ⚠️ The page, the cards, the card grid, the table and the notes are the design
+  system's. This screen owns three things: the stat tiles, the funnel bars and
+  the status chips.
+
+  🔴 No chart library. Every "chart" here is a div with a width — six stat
+  tiles and ten bars do not justify a dependency, and a library's default
+  palette would be the first thing in this product that did not come from the
+  design system.
+*/
+
+.an__queues--late {
+  /* Marked, not shouted. The number inside says how late. */
+  border-color: var(--jp-warning);
+}
+
+.an__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.an__late {
+  color: var(--jp-warning-text);
+}
+
+/* ---- the tiles ----------------------------------------------------------- */
+
+.an__tiles {
+  /* The design system's card-grid handles the columns; this only tightens it. */
+  gap: v.$space-3;
+}
+
+.an__tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: v.$space-4;
+}
+
+.an__tile--attention {
+  border-color: var(--jp-warning);
+}
+
+/*
+  Tabular figures, so a column of tiles lines up and a 4 does not sit narrower
+  than a 28. These are numbers to compare, not words to read.
+*/
+.an__tile-value {
+  font-size: var(--jp-font-size-2xl, 1.75rem);
+  font-weight: var(--jp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.an__tile-label {
+  font-size: var(--jp-font-size-sm);
+  font-weight: var(--jp-font-weight-medium);
+}
+
+.an__tile-note {
+  font-size: var(--jp-font-size-sm);
+  color: var(--jp-text-subtle);
+}
+
+/* ---- the funnel ---------------------------------------------------------- */
+
+.an__funnel {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: v.$space-2;
+}
+
+.an__stage {
+  display: grid;
+  grid-template-columns: 9rem 1fr 7rem;
+  align-items: center;
+  gap: v.$space-3;
+}
+
+.an__stage-name {
+  font-size: var(--jp-font-size-sm);
+}
+
+/*
+  ⚠️ A zero-width fill is intentional and visible: the track still shows, so an
+  empty stage reads as "a stage with nothing in it" rather than as a missing
+  row.
+*/
+.an__bar {
+  display: block;
+  height: 0.5rem;
+  background: var(--jp-surface-sunken);
+  border-radius: var(--jp-radius-sm, 0.25rem);
+  overflow: hidden;
+}
+
+.an__bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--jp-primary);
+  border-radius: inherit;
+}
+
+.an__stage-value {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--jp-font-size-sm);
+  text-align: right;
+}
+
+.an__stage-recent {
+  display: block;
+  color: var(--jp-text-subtle);
+}
+
+/* ---- the two columns ----------------------------------------------------- */
+
+.an__columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: v.$space-3;
+}
+
+.an__group + .an__group {
+  margin-top: v.$space-4;
+}
+
+.an__group-title {
+  @include m.flex-between(baseline, v.$space-2);
+
+  margin: 0 0 v.$space-2;
+  font-size: var(--jp-font-size-sm);
+  font-weight: var(--jp-font-weight-semibold);
+}
+
+.an__group-total {
+  font-variant-numeric: tabular-nums;
+  color: var(--jp-text-muted);
+}
+
+.an__group-empty {
+  margin: 0;
+  color: var(--jp-text-subtle);
+  font-size: var(--jp-font-size-sm);
+}
+
+.an__chips {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: v.$space-2;
+}
+
+.an__chip {
+  padding: 2px v.$space-2;
+  background: var(--jp-surface-sunken);
+  border-radius: var(--jp-radius-sm, 0.25rem);
+  font-size: var(--jp-font-size-sm);
+  color: var(--jp-text-muted);
+}
+
+.an__meta {
+  margin: v.$space-4 0 0;
+  color: var(--jp-text-subtle);
+  font-size: var(--jp-font-size-sm);
+}
+
+@include m.down(md) {
+  /* One column, and the funnel loses its fixed label gutter. */
+  .an__columns { grid-template-columns: minmax(0, 1fr); }
+
+  .an__stage {
+    grid-template-columns: 1fr auto;
+    gap: v.$space-2;
+  }
+
+  /*
+    ⚠️ The bar spans the row on a phone rather than being squeezed between two
+    labels. A 40px bar communicates nothing.
+  */
+  .an__bar {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+}

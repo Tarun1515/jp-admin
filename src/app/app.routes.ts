@@ -223,9 +223,35 @@ export const routes: Routes = [
       */
       { path: 'cms', pathMatch: 'full', redirectTo: 'cms/featured' },
 
-      { path: 'users', loadComponent: comingSoon, data: { title: 'Users' } },
+      /*
+        Phase 8-0 — accounts. §3 lists user management in the MVP and this
+        route pointed at the placeholder since 1D. The endpoints were already
+        complete (search, type, status, dates, paging, and a RowVersion-checked
+        status change), so 8-0 owed a screen rather than an API.
+      */
+      {
+        path: 'users',
+        loadComponent: () =>
+          import('./features/users/user-list.component').then((m) => m.UserListComponent),
+        data: { title: 'Accounts' },
+      },
       { path: 'masters', loadComponent: comingSoon, data: { title: 'Master data' } },
-      { path: 'reports', loadComponent: comingSoon, data: { title: 'Analytics' } },
+      /*
+        Phase 8-0 — analytics. §3's "Reports/dashboard", built only from
+        numbers that exist: three procedures that COUNT rows, each with a
+        build guard against reading a denormalised counter or projecting an
+        identity.
+
+        🔒 REPORT.VIEW *and* an admin user type on the server, because a
+        school Viewer holds REPORT.VIEW for its own reports — the permission
+        alone would not be a gate here.
+      */
+      {
+        path: 'reports',
+        loadComponent: () =>
+          import('./features/analytics/analytics.component').then((m) => m.AnalyticsComponent),
+        data: { title: 'Analytics' },
+      },
       { path: 'settings', loadComponent: comingSoon, data: { title: 'Settings' } },
     ],
   },

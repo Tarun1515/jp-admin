@@ -1,0 +1,342 @@
+<!--
+  Chrome is jp-shared's: `.page`, `.page__toolbar`, `.table`, `.table-pager`,
+  `.row--attention`, `.row--muted`, `.card`, `.banner`, `.note`, `.field`,
+  `.btn`. This screen's SCSS holds only its own columns and the phone reflow.
+-->
+<div class="page enter">
+  <header class="page__header">
+    <div class="page__heading">
+      <h1 class="page__title">Accounts</h1>
+      <p class="page__description">
+        Every account on the platform — administrators, schools and teachers.
+        Search by email or mobile, and act on one.
+      </p>
+    </div>
+  </header>
+
+  @if (outcome(); as message) {
+    <div class="banner banner--success" role="status">
+      <div><strong>{{ message }}</strong></div>
+    </div>
+  }
+
+  <div class="page__toolbar" style="--jp-enter-index: 1">
+    <div class="page__toolbar__search">
+      <label class="visually-hidden" for="usr-search">Search by email or mobile</label>
+      <input
+        class="form-control"
+        id="usr-search"
+        type="search"
+        placeholder="Email or mobile number"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        (keyup.enter)="onFilterChange()"
+        (search)="onFilterChange()"
+      />
+    </div>
+
+    <div class="page__toolbar__control">
+      <label class="visually-hidden" for="usr-type">User type</label>
+      <select
+        class="form-control"
+        id="usr-type"
+        [ngModel]="userTypeId()"
+        (ngModelChange)="userTypeId.set($event === null ? null : +$event); onFilterChange()"
+      >
+        <option [ngValue]="null">Every type</option>
+        @for (type of types; track type.id) {
+          <option [ngValue]="type.id">{{ type.label }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="page__toolbar__control">
+      <label class="visually-hidden" for="usr-status">Status</label>
+      <select
+        class="form-control"
+        id="usr-status"
+        [ngModel]="statusId()"
+        (ngModelChange)="statusId.set($event === null ? null : +$event); onFilterChange()"
+      >
+        <option [ngValue]="null">Every status</option>
+        @for (status of statuses; track status.id) {
+          <option [ngValue]="status.id">{{ status.label }}</option>
+        }
+      </select>
+    </div>
+
+    @if (filtered()) {
+      <button type="button" class="btn btn--sm btn--ghost page__toolbar__clear" (click)="clearFilters()">
+        Clear
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <p class="table__loading">Loading …</p>
+  } @else if (failed()) {
+    <!--
+      🔴 A FAILED READ IS NOT AN EMPTY PLATFORM. "There are no accounts" would
+      be an alarming and false thing to show an administrator.
+    -->
+    <p class="note" role="alert">
+      The accounts could not be loaded. Nothing has changed — try again in a
+      moment.
+    </p>
+  } @else if (rows().length === 0) {
+    <p class="note">
+      @if (filtered()) {
+        No account matches this search.
+      } @else {
+        No accounts yet.
+      }
+    </p>
+  } @else {
+    <div class="table-wrap">
+      <table class="table table--hover">
+        <thead>
+          <tr>
+            <th scope="col">Account</th>
+            <th scope="col">Type</th>
+            <th scope="col">Status</th>
+            <th scope="col">Verified</th>
+            <th scope="col">Last signed in</th>
+            <th scope="col" class="usr__num">Failed</th>
+            <th scope="col"><span class="visually-hidden">Act</span></th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (row of rows(); track row.userUid) {
+            <!--
+              One colour, one meaning: the rule marks an account waiting for a
+              decision. Rejected and suspended accounts recede — a decision
+              already taken is not work.
+            -->
+            <tr
+              [class.row--attention]="row.statusId === 1 || row.statusId === 6"
+              [class.row--muted]="row.statusId === 3 || row.statusId === 4"
+            >
+              <td>
+                <strong>{{ row.email }}</strong>
+                <span class="usr__sub">
+                  @if (row.mobile) { {{ row.mobile }} · }<code>{{ tag(row) }}</code>
+                </span>
+              </td>
+
+              <td>{{ row.userTypeName }}</td>
+
+              <td>
+                <ui-badge [tone]="tone(row)" size="sm">{{ row.statusName }}</ui-badge>
+              </td>
+
+              <!--
+                ⚠️ Two flags, not one. An account can hold a verified email and
+                an unverified mobile, and "Verified" as a single tick would hide
+                which of the two a support call is actually about.
+              -->
+              <td class="usr__verified">
+                <span [class.usr__yes]="row.isEmailVerified">
+                  {{ row.isEmailVerified ? 'email' : 'no email' }}
+                </span>
+                <span [class.usr__yes]="row.isMobileVerified">
+                  {{ row.isMobileVerified ? 'mobile' : 'no mobile' }}
+                </span>
+              </td>
+
+              <td class="usr__when">{{ day(row.lastLoginOnUtc) }}</td>
+
+              <td class="usr__num">
+                @if (row.failedAttemptCount > 0) {
+                  <strong class="usr__flag">{{ row.failedAttemptCount }}</strong>
+                } @else {
+                  —
+                }
+              </td>
+
+              <td class="usr__actions">
+                <!--
+                  ⚠️ Only the transitions the server will accept are offered.
+                  An action it would refuse is worse than no action: the
+                  refusal arrives after the click, about a rule nobody showed.
+                -->
+                @if (canApprove(row)) {
+                  <button type="button" class="btn btn--sm btn--primary" (click)="start(row, 'approve')">
+                    Approve
+                  </button>
+                }
+                @if (canReject(row)) {
+                  <button type="button" class="btn btn--sm btn--ghost" (click)="start(row, 'reject')">
+                    Reject
+                  </button>
+                }
+                @if (canSuspend(row)) {
+                  <button type="button" class="btn btn--sm btn--danger" (click)="start(row, 'suspend')">
+                    Suspend
+                  </button>
+                }
+                @if (canReactivate(row)) {
+                  <button type="button" class="btn btn--sm" (click)="start(row, 'reactivate')">
+                    Reactivate
+                  </button>
+                }
+                @if (canUnlock(row)) {
+                  <button type="button" class="btn btn--sm" (click)="start(row, 'unlock')">
+                    Unlock
+                  </button>
+                }
+
+                @if (isMe(row)) {
+                  <!--
+                    🔴 SAID, NOT SILENTLY OMITTED. Nothing on the server stops an
+                    administrator suspending their own account — and if they are
+                    the last SUPER_ADMIN, nobody can administer the platform
+                    afterwards (G46, for 8A). The screen declines to offer it and
+                    names itself, because an action that is simply missing reads
+                    as a bug.
+                  -->
+                  <span class="usr__me">you</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (total() > pageSize) {
+      <nav class="table-pager" aria-label="Account pages">
+        <span class="table-pager__summary">
+          {{ rangeStart() }}–{{ rangeEnd() }} of {{ total() }}
+        </span>
+
+        <div class="table-pager__controls">
+          <button
+            type="button"
+            class="table-pager__page"
+            [disabled]="page() === 1"
+            (click)="goToPage(page() - 1)"
+            aria-label="Previous page"
+          >‹</button>
+
+          @for (number of pageNumbers(); track number) {
+            <button
+              type="button"
+              class="table-pager__page"
+              [attr.aria-current]="number === page() ? 'page' : null"
+              (click)="goToPage(number)"
+            >{{ number }}</button>
+          }
+
+          <button
+            type="button"
+            class="table-pager__page"
+            [disabled]="page() === totalPages()"
+            (click)="goToPage(page() + 1)"
+            aria-label="Next page"
+          >›</button>
+        </div>
+      </nav>
+    }
+  }
+
+  <!-- ================================================== the panel ======== -->
+  @if (open(); as account) {
+    <section class="card usr__panel" role="group" aria-labelledby="usr-panel-title">
+      <div class="card__header">
+        <div>
+          <h2 class="card__title" id="usr-panel-title">
+            {{ intentLabel() }} {{ account.email }}
+          </h2>
+          <p class="card__subtitle">
+            {{ account.userTypeName }} · currently {{ account.statusName }}
+          </p>
+        </div>
+      </div>
+
+      <div class="card__body">
+        @if (intent() === 'suspend') {
+          <p class="usr__what">
+            They cannot sign in until an administrator reactivates the account.
+            <strong>The reason below is kept and shown against the account</strong>,
+            so whoever answers their call can see why.
+          </p>
+        } @else if (intent() === 'unlock') {
+          <p class="usr__what">
+            A lockout comes from failed sign-ins and clears itself. This lifts
+            it now rather than waiting.
+          </p>
+        } @else if (intent() === 'reject') {
+          <p class="usr__what">
+            The account stays on the platform and cannot sign in. Reactivating
+            it later is one click.
+          </p>
+        } @else {
+          <p class="usr__what">
+            They can sign in from the moment this is saved.
+          </p>
+        }
+
+        @if (keepsReason()) {
+          <div class="field">
+            <div class="field__label-row">
+              <label class="field__label" for="usr-remarks">
+                Reason
+                @if (intent() === 'suspend') {
+                  <span class="usr__req" aria-hidden="true">*</span>
+                } @else {
+                  <span class="field__optional">optional</span>
+                }
+              </label>
+            </div>
+
+            <textarea
+              class="form-control"
+              id="usr-remarks"
+              rows="3"
+              [ngModel]="remarks()"
+              (ngModelChange)="remarks.set($event)"
+              aria-describedby="usr-remarks-help"
+            ></textarea>
+
+            <p class="field__helper" id="usr-remarks-help">
+              Recorded against the account with your name, where support can
+              read it.
+            </p>
+          </div>
+        } @else {
+          <!--
+            🔴 THE HONEST ABSENCE. USP_UpdateUserStatus accepts a remark on
+            this transition and discards it — only a suspension writes one
+            (into t_sso_user_lockouts). A reason box here would collect
+            something the product throws away, which is the contact form's
+            `role` field that 7A deleted rather than store nowhere. G45 records
+            the missing status history.
+          -->
+          <p class="note">
+            This change is saved without a note — only a suspension records a
+            reason today.
+          </p>
+        }
+      </div>
+
+      <div class="card__footer form-actions">
+        <button type="button" class="btn btn--ghost" (click)="cancel()">Cancel</button>
+
+        <button
+          type="button"
+          [class]="intent() === 'suspend' || intent() === 'reject'
+            ? 'btn btn--danger' : 'btn btn--primary'"
+          [disabled]="submitting() || reasonMissing()"
+          (click)="confirm()"
+        >
+          @if (submitting()) { Saving … } @else { {{ intentLabel() }} }
+        </button>
+
+        @if (reasonMissing()) {
+          <span class="usr__req-note">A reason is required to suspend.</span>
+        }
+      </div>
+    </section>
+  }
+</div>
