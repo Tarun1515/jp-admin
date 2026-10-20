@@ -16,24 +16,24 @@
   </header>
 
   <!--
-    🔴 THE SENTENCE THIS SCREEN HAS TO SAY (G44).
+    🔴 THE SAME SENTENCE, NOW THAT IT HAS A DIFFERENT ANSWER (G44 closed, 8-0).
 
-    The endpoint is live and anonymous, and nothing on the public site renders
-    a block yet. An editor who types a hero line, saves it and sees the site
-    unchanged would reasonably conclude the save failed — so the screen says
-    which it is, before they type.
+    In 7B this banner said no public page rendered a block, because none did.
+    8-0 gave the blocks a consumer, so the banner says the precise thing
+    instead: which keys appear, where, and when.
 
-    ⚠️ It stays until a public page actually reads one. Removing this notice is
-    the last step of closing that gap, not the first.
+    ⚠️ IT DID NOT BECOME A SUCCESS MESSAGE. An editor still needs to know that
+    a key outside the prefix is stored and rendered nowhere — that is the part
+    that would otherwise look like a broken save.
   -->
-  <div class="banner banner--warning" role="status">
+  <div class="banner banner--info" role="status">
     <div>
-      <strong>No public page shows these yet.</strong>
+      <strong>Keys beginning <code>HOME_</code> appear on the public home page.</strong>
       <p>
-        The copy saves and the site serves it at
-        <code>/api/public/content-blocks</code>, but no page on
-        staffroom.in reads a block today. Anything written here is stored and
-        waiting, not published.
+        They are read in the visitor's browser, so an edit here shows up on the
+        next page load — no deploy. Any other key is stored and served at
+        <code>/api/public/content-blocks</code>, but no page reads it yet, so
+        it appears nowhere.
       </p>
     </div>
   </div>

@@ -8,24 +8,23 @@ import { AdminContentBlock, ContentService } from '../../../core/content.service
  * Page content — designated copy, addressed by key. Phase 7B.
  *
  * ----------------------------------------------------------------------------
- * 🔴 WHAT THIS SCREEN WRITES, AND WHERE IT APPEARS TODAY: NOWHERE (G44)
+ * 🔴 WHERE THIS COPY APPEARS — G44, CLOSED IN PHASE 8-0
  * ----------------------------------------------------------------------------
- * `GET /api/public/content-blocks` is live and anonymous, and jp-public's
- * service has a `getContentBlocks()` method — with no caller. Not one public
- * page renders a block yet, so copy saved here is stored and served and
- * displayed by nothing.
+ * A block whose key begins `HOME_` renders on jp-public's home page, ordered
+ * by DisplayOrder. Any other key is stored and served at
+ * `GET /api/public/content-blocks` and read by no page — which the banner on
+ * this screen states, because an editor who cannot tell those two cases apart
+ * will read the second as a broken save.
  *
- * That is said ON THE SCREEN, not just here. An editor typing a hero line and
- * finding the site unchanged would reasonably conclude the save failed, and
- * "it saved, nothing shows it" is a sentence the product has to be willing to
- * say out loud.
+ * ⚠️ READ IN THE BROWSER, AFTER HYDRATION, and that is 2.81's decision for
+ * that page rather than an accident: the home page is prerendered, so a block
+ * read at render time would be baked at build time and an edit would need a
+ * redeploy. Read client-side, an edit appears on the next load.
  *
- * ⚠️ AND IT IS NOT MERELY A MISSING COMPONENT. jp-public prerenders its
- * static pages (`RenderMode.Prerender` on `**`), so a block on the homepage
- * would be baked at build time and an edit would need a redeploy to show. The
- * pages that could show one live are the server-rendered ones. Wiring that is
- * a jp-public change and belongs to the phase that owns jp-public, which is
- * why 7B records a gap instead of reaching across.
+ * The consequence is that block copy is NOT in the server's HTML, and
+ * `public-screens.mjs` asserts that in both directions — present in a
+ * browser, absent from the prerendered bytes — so the trade-off cannot be
+ * reversed by accident.
  *
  * ----------------------------------------------------------------------------
  * 🔴 THE KEY IS THE CONTRACT
