@@ -38,6 +38,29 @@ export interface AdminAccount {
   rowVersion: number;
 }
 
+/**
+ * One recorded status change, exactly as `GET /api/users/{uid}/status-history`
+ * returns it. G45, phase 8A.
+ *
+ * ⚠️ `fromStatusName` is null when the previous status is not known — a
+ * registration arriving at its first status, or a row written before the table
+ * existed. `actionByEmail` is null when that administrator's account is gone,
+ * which the history survives on purpose.
+ */
+export interface AccountStatusChange {
+  statusHistoryId: number;
+  fromStatusId: number | null;
+  fromStatusName: string | null;
+  toStatusId: number;
+  toStatusName: string | null;
+  reason: string | null;
+  actionByUserId: number | null;
+  actionByEmail: string | null;
+
+  /** UTC. The screen renders it in IST, like every other instant (2.28). */
+  createdOn: string;
+}
+
 export interface AccountPage {
   rows: AdminAccount[];
   totalRecords: number;
@@ -158,5 +181,21 @@ export class UserAdminService {
     return this.http
       .post<ApiResponse<null>>(`${this.base}/${account.userUid}/unlock`, { remarks })
       .pipe(map((r) => r.message));
+  }
+
+  /**
+   * Every recorded status change on one account, newest first (G45).
+   *
+   * 🔒 Admin-only on the server, gated exactly as hard as the write — the
+   * reason text is one administrator's words about somebody's account.
+   *
+   * ⚠️ NOT CACHED, and not folded into the list response. An administrator
+   * opens this for one account at a time, and the whole point of it is to be
+   * current the moment it is opened.
+   */
+  statusHistory(account: AdminAccount): Observable<AccountStatusChange[]> {
+    return this.http
+      .get<ApiResponse<AccountStatusChange[]>>(`${this.base}/${account.userUid}/status-history`)
+      .pipe(map((r) => r.data ?? []));
   }
 }

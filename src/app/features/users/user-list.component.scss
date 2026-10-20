@@ -103,3 +103,64 @@
   color: var(--jp-text-subtle);
   font-size: var(--jp-font-size-sm);
 }
+
+/* ---------------------------------------------------------------- history --
+   G45. What has already happened to this account, inside the action panel.
+
+   Indented with a rule rather than a timeline with dots: the list is usually
+   two or three rows, and a decorated timeline makes three rows look like a
+   feature. The reason text is the thing being read, so it gets the weight.
+-------------------------------------------------------------------------- */
+.usr__history {
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--border);
+}
+
+.usr__history-title {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.usr__trail {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.usr__trail-item {
+  padding: 0 0 var(--sp-4) var(--sp-4);
+  border-left: 2px solid var(--border);
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.usr__trail-move {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+
+.usr__trail-who {
+  margin: 2px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.usr__trail-reason {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.usr__trail-reason--none {
+  color: var(--text-muted);
+  font-style: italic;
+}

@@ -257,9 +257,21 @@
       <div class="card__body">
         @if (intent() === 'suspend') {
           <p class="usr__what">
-            They cannot sign in until an administrator reactivates the account.
+            They cannot <strong>sign in</strong> until an administrator reactivates
+            the account, and their saved sessions are revoked.
             <strong>The reason below is kept and shown against the account</strong>,
             so whoever answers their call can see why.
+          </p>
+          <!--
+            ⚠️ "cannot sign in" IS THE PRECISE CLAIM, AND IT USED TO OVERSTATE.
+            8A measured it: suspension revokes refresh tokens, so no NEW token
+            can be obtained — but an access token already in a browser keeps
+            working until it expires, up to an hour (G48). The earlier wording
+            implied the session ended immediately.
+          -->
+          <p class="note">
+            A browser they are already signed into may keep working for up to
+            an hour, until its token expires.
           </p>
         } @else if (intent() === 'unlock') {
           <p class="usr__what">
@@ -277,46 +289,100 @@
           </p>
         }
 
-        @if (keepsReason()) {
-          <div class="field">
-            <div class="field__label-row">
-              <label class="field__label" for="usr-remarks">
-                Reason
-                @if (intent() === 'suspend') {
-                  <span class="usr__req" aria-hidden="true">*</span>
-                } @else {
-                  <span class="field__optional">optional</span>
-                }
-              </label>
-            </div>
+        <!--
+          🔴 G45: NO @if AROUND THIS ANY MORE.
 
-            <textarea
-              class="form-control"
-              id="usr-remarks"
-              rows="3"
-              [ngModel]="remarks()"
-              (ngModelChange)="remarks.set($event)"
-              aria-describedby="usr-remarks-help"
-            ></textarea>
-
-            <p class="field__helper" id="usr-remarks-help">
-              Recorded against the account with your name, where support can
-              read it.
-            </p>
+          It used to be @if (keepsReason()), which hid the field on approve,
+          reject and reactivate because USP_UpdateUserStatus discarded the
+          reason on those three. 8A added t_sso_user_status_history, so every
+          transition keeps it and the field belongs everywhere.
+        -->
+        <div class="field">
+          <div class="field__label-row">
+            <label class="field__label" for="usr-remarks">
+              Reason
+              @if (intent() === 'suspend') {
+                <span class="usr__req" aria-hidden="true">*</span>
+              } @else {
+                <span class="field__optional">optional</span>
+              }
+            </label>
           </div>
-        } @else {
-          <!--
-            🔴 THE HONEST ABSENCE. USP_UpdateUserStatus accepts a remark on
-            this transition and discards it — only a suspension writes one
-            (into t_sso_user_lockouts). A reason box here would collect
-            something the product throws away, which is the contact form's
-            `role` field that 7A deleted rather than store nowhere. G45 records
-            the missing status history.
-          -->
-          <p class="note">
-            This change is saved without a note — only a suspension records a
-            reason today.
+
+          <textarea
+            class="form-control"
+            id="usr-remarks"
+            rows="3"
+            [ngModel]="remarks()"
+            (ngModelChange)="remarks.set($event)"
+            aria-describedby="usr-remarks-help"
+          ></textarea>
+
+          <p class="field__helper" id="usr-remarks-help">
+            Kept against the account with your name and the date, where the
+            next administrator and support can read it.
           </p>
+        </div>
+
+        <!-- ============================================ what came before == -->
+        <!--
+          G45. An administrator about to reject a school for the second time
+          should be able to see what was said the first time, without asking
+          anybody. Newest first, because the last thing that happened is the
+          thing being asked about.
+        -->
+        @if (history() === null) {
+          <p class="note">Loading what has happened to this account …</p>
+        } @else if (historyFailed()) {
+          <p class="note note--warning">
+            The account's history could not be loaded. This does not block the
+            change below — but it means nobody can see what was recorded
+            before, so it is worth a retry first.
+          </p>
+        } @else if (history()!.length === 0) {
+          <p class="note">
+            Nothing has been recorded against this account. Its status has not
+            been changed since it was created.
+          </p>
+        } @else {
+          <div class="usr__history">
+            <h3 class="usr__history-title">
+              Previously ({{ history()!.length }})
+            </h3>
+
+            <ol class="usr__trail">
+              @for (h of history(); track h.statusHistoryId) {
+                <li class="usr__trail-item">
+                  <p class="usr__trail-move">
+                    @if (h.fromStatusName) {
+                      {{ h.fromStatusName }} → <strong>{{ h.toStatusName }}</strong>
+                    } @else {
+                      set to <strong>{{ h.toStatusName }}</strong>
+                    }
+                  </p>
+
+                  <p class="usr__trail-who">
+                    {{ when(h.createdOn) }}
+                    ·
+                    <!--
+                      ⚠️ The administrator's account may be gone — the history
+                      has no foreign key precisely so that it survives that,
+                      and the screen says so rather than printing a number.
+                    -->
+                    {{ h.actionByEmail ?? 'an administrator (account no longer exists)' }}
+                  </p>
+
+                  @if (h.reason) {
+                    <p class="usr__trail-reason">{{ h.reason }}</p>
+                  } @else {
+                    <p class="usr__trail-reason usr__trail-reason--none">
+                      No reason was given.
+                    </p>
+                  }
+                </li>
+              }
+            </ol>
+          </div>
         }
       </div>
 

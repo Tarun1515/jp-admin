@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from 'jp-shared/core';
 import { UiBadgeComponent, UiBadgeTone } from 'jp-shared/ui';
 
-import { AdminAccount, UserAdminService } from '../../core/user-admin.service';
+import { AccountStatusChange, AdminAccount, UserAdminService } from '../../core/user-admin.service';
 
 /** What the open panel is about to do. */
 type Intent = 'approve' | 'reject' | 'suspend' | 'reactivate' | 'unlock';
@@ -21,18 +21,22 @@ type Intent = 'approve' | 'reject' | 'suspend' | 'reactivate' | 'unlock';
  * RowVersion. So this phase owed a screen, not an endpoint.
  *
  * ----------------------------------------------------------------------------
- * 🔴 THE REASON FIELD APPEARS WHERE THE REASON IS KEPT
+ * 🔴 THE REASON FIELD IS NOW ON EVERY TRANSITION — G45 CLOSED IN 8A
  * ----------------------------------------------------------------------------
- * A suspension's reason is written to `t_sso_user_lockouts` with the
- * administrator who did it, so the person asking "why can I not sign in" has
- * one place to look. On an approve, a reject or a reactivate the same
- * parameter is accepted and thrown away — there is no status history table
- * (G45).
+ * 8-0 shipped this screen with the field on suspend and unlock only, and said
+ * in writing why: those were the two transitions whose reason the product
+ * actually kept. An approve, a reject or a reactivate accepted the same
+ * parameter and threw it away, and collecting a note that goes nowhere is the
+ * contact form's `role` field, which 7A deleted rather than store nowhere.
  *
- * So the field is REQUIRED for a suspension, offered for an unlock (which also
- * keeps it), and ABSENT for the three transitions that discard it. Collecting a
- * note the product drops is the contact form's `role` field, which 7A deleted
- * rather than store nowhere.
+ * 8A built the table that was missing. `t_sso_user_status_history` is
+ * append-only and records every transition with its reason, the administrator
+ * and the instant — so the field is offered everywhere now, and the panel
+ * shows what was recorded before.
+ *
+ * It stays REQUIRED for a suspension and optional elsewhere. Requiring it
+ * everywhere would make an approval a form to fill in, and approvals are the
+ * action an administrator does fifty times in a sitting.
  *
  * ----------------------------------------------------------------------------
  * ⚠️ LOCKED IS NOT A STATUS AN ADMINISTRATOR SETS
@@ -135,9 +139,17 @@ export class UserListComponent {
   protected readonly outcome = signal<string | null>(null);
 
   /** 🔴 The two actions whose note is actually stored. */
-  protected readonly keepsReason = computed(
-    () => this.intent() === 'suspend' || this.intent() === 'unlock',
-  );
+  /**
+   * The account's recorded history, loaded when a panel opens.
+   *
+   * ⚠️ THREE STATES, NOT TWO: not loaded yet, loaded and empty, loaded with
+   * rows. "No history" and "still loading" look identical if they share one
+   * signal, and the difference matters here — an administrator deciding whether
+   * to reject a school a second time needs to know the absence is real.
+   */
+  protected readonly history = signal<AccountStatusChange[] | null>(null);
+
+  protected readonly historyFailed = signal(false);
 
   protected readonly reasonMissing = computed(
     () => this.intent() === 'suspend' && this.remarks().trim().length === 0,
@@ -182,10 +194,33 @@ export class UserListComponent {
 
   // ---- acting --------------------------------------------------------------
 
+  /**
+   * 🔴 G45: THE REASON IS KEPT ON EVERY TRANSITION NOW, so this is gone.
+   *
+   * It used to be `intent === 'suspend' || intent === 'unlock'`, hiding the
+   * field on the three transitions whose reason the product discarded. The
+   * history table removed the reason to hide it.
+   */
   protected start(row: AdminAccount, intent: Intent): void {
     this.open.set(row);
     this.intent.set(intent);
     this.remarks.set('');
+
+    /*
+      G45 — what was recorded before, loaded as the panel opens. A failure is
+      shown as a failure rather than as an empty history: "nobody has ever
+      changed this account" and "we could not find out" are different answers.
+    */
+    this.history.set(null);
+    this.historyFailed.set(false);
+
+    this.users.statusHistory(row).subscribe({
+      next: (rows) => this.history.set(rows),
+      error: () => {
+        this.history.set([]);
+        this.historyFailed.set(true);
+      },
+    });
     this.outcome.set(null);
   }
 
@@ -310,6 +345,31 @@ export class UserListComponent {
 
     return at.toLocaleDateString('en-IN', {
       day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata',
+    });
+  }
+
+  /**
+   * A recorded moment — the date AND the time, which `day()` deliberately
+   * omits for the table.
+   *
+   * 🔴 THE TRAILING Z IS LOAD BEARING, AND ITS ABSENCE IS MEASURABLE. The API
+   * serialises these instants without a zone suffix — the live response reads
+   * "2026-10-20T12:38:40.49" — and `new Date()` on a string with no zone
+   * applies the BROWSER'S. In IST that renders a UTC instant five and a half
+   * hours early, and it renders it confidently: a suspension at 18:08 would
+   * appear as 12:38, with nothing on screen to suggest anything is wrong.
+   *
+   * `day()` beside this has handled it since 8-0 for the same reason. The zone
+   * is then named explicitly so an administrator abroad reads the same clock as
+   * one in Mumbai (2.28: storage UTC, rules IST).
+   */
+  protected when(value: string): string {
+    const at = new Date(value.endsWith('Z') ? value : `${value}Z`);
+
+    return at.toLocaleString('en-IN', {
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: 'numeric', minute: '2-digit',
+      timeZone: 'Asia/Kolkata',
     });
   }
 
